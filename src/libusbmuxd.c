@@ -74,7 +74,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 // misc utility functions
 #include "collection.h"
 
-static int libusbmuxd_debug = 2;
+static int libusbmuxd_debug = 0;
 #define DEBUG(x, y, ...) if (x <= libusbmuxd_debug) fprintf(stderr, (y), __VA_ARGS__);
 
 static struct collection devices;
