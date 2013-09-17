@@ -1,4 +1,4 @@
-AM_CFLAGS = $(GLOBAL_CFLAGS) -I$(top_srcdir)/src
+AM_CFLAGS = $(GLOBAL_CFLAGS) -I$(top_srcdir)/src -I$(top_srcdir)/include
 AM_LDFLAGS = $(libpthread_LIBS)
 
 bin_PROGRAMS = iproxy
