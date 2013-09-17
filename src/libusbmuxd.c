@@ -757,7 +757,7 @@ retry:
 
 	// receive device list
 	while (1) {
-		if (receive_packet(sfd, &hdr, &payload, 1000) > 0) {
+		if (receive_packet(sfd, &hdr, &payload, 100) > 0) {
 			if (hdr.message == MESSAGE_DEVICE_ADD) {
 				dev = payload;
 				usbmuxd_device_info_t *devinfo = (usbmuxd_device_info_t*)malloc(sizeof(usbmuxd_device_info_t));
