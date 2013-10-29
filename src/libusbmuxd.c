@@ -167,7 +167,7 @@ static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload
 		plist_t node = plist_dict_get_item(plist, "MessageType");
 		if (plist_get_node_type(node) != PLIST_STRING) {
 			DEBUG(1, "%s: Error getting message type from plist!\n", __func__);
-			free(plist);
+			plist_free(plist);
 			return -EBADMSG;
 		}
 		
