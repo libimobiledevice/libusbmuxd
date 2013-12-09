@@ -63,6 +63,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #define PLIST_BUNDLE_ID "com.marcansoft.usbmuxd"
 #define PLIST_CLIENT_VERSION_STRING "usbmuxd built for freedom"
 #define PLIST_PROGNAME "libusbmuxd"
+#define PLIST_LIBUSBMUX_VERSION 3
 #endif
 
 // usbmuxd public interface
@@ -341,6 +342,7 @@ static plist_t create_plist_message(const char* message_type)
 	plist_dict_insert_item(plist, "ClientVersionString", plist_new_string(PLIST_CLIENT_VERSION_STRING));
 	plist_dict_insert_item(plist, "MessageType", plist_new_string(message_type));
 	plist_dict_insert_item(plist, "ProgName", plist_new_string(PLIST_PROGNAME));	
+	plist_dict_insert_item(plist, "kLibUSBMuxVersion", plist_new_uint(PLIST_LIBUSBMUX_VERSION));
 	return plist;
 }
 #endif
