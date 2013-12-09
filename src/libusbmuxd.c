@@ -320,27 +320,41 @@ static int send_packet(int sfd, uint32_t message, uint32_t tag, void *payload, u
 	return sent;
 }
 
+#ifdef HAVE_PLIST
+static int send_plist_packet(int sfd, uint32_t tag, plist_t message)
+{
+	int res;
+	char *payload = NULL;
+	uint32_t payload_size = 0;
+
+	plist_to_xml(message, &payload, &payload_size);
+	res = send_packet(sfd, MESSAGE_PLIST, tag, payload, payload_size);
+	free(payload);
+
+	return res;
+}
+
+static plist_t create_plist_message(const char* message_type)
+{
+	plist_t plist = plist_new_dict();
+	plist_dict_insert_item(plist, "BundleID", plist_new_string(PLIST_BUNDLE_ID));
+	plist_dict_insert_item(plist, "ClientVersionString", plist_new_string(PLIST_CLIENT_VERSION_STRING));
+	plist_dict_insert_item(plist, "MessageType", plist_new_string(message_type));
+	plist_dict_insert_item(plist, "ProgName", plist_new_string(PLIST_PROGNAME));	
+	return plist;
+}
+#endif
+
 static int send_listen_packet(int sfd, uint32_t tag)
 {
 	int res = 0;
 #ifdef HAVE_PLIST
 	if (proto_version == 1) {
-		/* plist packet */
-		char *payload = NULL;
-		uint32_t payload_size = 0;
-		plist_t plist;
-
 		/* construct message plist */
-		plist = plist_new_dict();
-		plist_dict_insert_item(plist, "BundleID", plist_new_string(PLIST_BUNDLE_ID));
-		plist_dict_insert_item(plist, "ClientVersionString", plist_new_string(PLIST_CLIENT_VERSION_STRING));
-		plist_dict_insert_item(plist, "MessageType", plist_new_string("Listen"));
-		plist_dict_insert_item(plist, "ProgName", plist_new_string(PLIST_PROGNAME));
-		plist_to_xml(plist, &payload, &payload_size);
-		plist_free(plist);
+		plist_t plist = create_plist_message("Listen");
 
-		res = send_packet(sfd, MESSAGE_PLIST, tag, payload, payload_size);
-		free(payload);
+		res = send_plist_packet(sfd, tag, plist);
+		plist_free(plist);
 	} else
 #endif
 	{
@@ -355,24 +369,13 @@ static int send_connect_packet(int sfd, uint32_t tag, uint32_t device_id, uint16
 	int res = 0;
 #ifdef HAVE_PLIST
 	if (proto_version == 1) {
-		/* plist packet */
-		char *payload = NULL;
-		uint32_t payload_size = 0;
-		plist_t plist;
-
 		/* construct message plist */
-		plist = plist_new_dict();
-		plist_dict_insert_item(plist, "BundleID", plist_new_string(PLIST_BUNDLE_ID));
-		plist_dict_insert_item(plist, "ClientVersionString", plist_new_string(PLIST_CLIENT_VERSION_STRING));
-		plist_dict_insert_item(plist, "MessageType", plist_new_string("Connect"));
+		plist_t plist = create_plist_message("Connect");
 		plist_dict_insert_item(plist, "DeviceID", plist_new_uint(device_id));
 		plist_dict_insert_item(plist, "PortNumber", plist_new_uint(htons(port)));
-		plist_dict_insert_item(plist, "ProgName", plist_new_string(PLIST_PROGNAME));
-		plist_to_xml(plist, &payload, &payload_size);
-		plist_free(plist);
 
-		res = send_packet(sfd, MESSAGE_PLIST, tag, (void*)payload, payload_size);
-		free(payload);
+		res = send_plist_packet(sfd, tag, plist);
+		plist_free(plist);
 	} else
 #endif
 	{
