@@ -95,7 +95,11 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static int listenfd = -1;
 
 static int use_tag = 0;
+#ifdef HAVE_PLIST
+static int proto_version = 1;
+#else
 static int proto_version = 0;
+#endif
 
 /**
  * Finds a device info record by its handle.
@@ -533,8 +537,8 @@ retry:
 		UNLOCK;
 		close_socket(sfd);
 #ifdef HAVE_PLIST
-		if ((res == RESULT_BADVERSION) && (proto_version != 1)) {
-			proto_version = 1;
+		if ((res == RESULT_BADVERSION) && (proto_version == 1)) {
+			proto_version = 0;
 			goto retry;
 		}
 #endif
@@ -742,8 +746,8 @@ retry:
 			UNLOCK;
 			close_socket(sfd);
 #ifdef HAVE_PLIST
-			if ((res == RESULT_BADVERSION) && (proto_version != 1)) {
-				proto_version = 1;
+			if ((res == RESULT_BADVERSION) && (proto_version == 1)) {
+				proto_version = 0;
 				goto retry;
 			}
 #endif
@@ -905,8 +909,8 @@ retry:
 				connected = 1;
 			} else {
 #ifdef HAVE_PLIST
-				if ((res == RESULT_BADVERSION) && (proto_version == 0)) {
-					proto_version = 1;
+				if ((res == RESULT_BADVERSION) && (proto_version == 1)) {
+					proto_version = 0;
 					close_socket(sfd);
 					goto retry;
 				}
