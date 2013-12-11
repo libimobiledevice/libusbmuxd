@@ -170,10 +170,11 @@ static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload
 		}
 
 		plist_t node = plist_dict_get_item(plist, "MessageType");
-		if (plist_get_node_type(node) != PLIST_STRING) {
-			DEBUG(1, "%s: Error getting message type from plist!\n", __func__);
-			plist_free(plist);
-			return -EBADMSG;
+		if (!node || plist_get_node_type(node) != PLIST_STRING) {
+			*payload = plist;
+			hdr.length = sizeof(hdr);
+			memcpy(header, &hdr, sizeof(hdr));
+			return hdr.length;
 		}
 		
 		plist_get_string_val(node, &message);
@@ -258,7 +259,7 @@ static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload
 /**
  * Retrieves the result code to a previously sent request.
  */
-static int usbmuxd_get_result(int sfd, uint32_t tag, uint32_t * result)
+static int usbmuxd_get_result(int sfd, uint32_t tag, uint32_t *result, void **result_plist)
 {
 	struct usbmuxd_header hdr;
 	int recv_len;
@@ -268,6 +269,9 @@ static int usbmuxd_get_result(int sfd, uint32_t tag, uint32_t * result)
 		return -EINVAL;
 	}
 	*result = -1;
+	if (result_plist) {
+		*result_plist = NULL;
+	}
 
 	if ((recv_len = receive_packet(sfd, &hdr, (void**)&res, 5000)) < 0) {
 		DEBUG(1, "%s: Error receiving packet: %d\n", __func__, errno);
@@ -292,6 +296,17 @@ static int usbmuxd_get_result(int sfd, uint32_t tag, uint32_t * result)
 			free(res);
 		return ret;
 	}
+#ifdef HAVE_PLIST
+	else if (hdr.message == MESSAGE_PLIST) {
+		if (!result_plist) {
+			DEBUG(1, "%s: MESSAGE_PLIST result but result_plist pointer is NULL!\n", __func__);
+			return -1;
+		}
+		*result_plist = (plist_t)res;
+		*result = RESULT_OK;
+		return 1;
+	}
+#endif
 	DEBUG(1, "%s: Unexpected message of type %d received!\n", __func__, hdr.message);
 	if (res)
 		free(res);
@@ -533,7 +548,7 @@ retry:
 		close_socket(sfd);
 		return -1;
 	}
-	if (usbmuxd_get_result(sfd, use_tag, &res) && (res != 0)) {
+	if (usbmuxd_get_result(sfd, use_tag, &res, NULL) && (res != 0)) {
 		UNLOCK;
 		close_socket(sfd);
 #ifdef HAVE_PLIST
@@ -740,7 +755,7 @@ retry:
 	if (send_listen_packet(sfd, use_tag) > 0) {
 		res = -1;
 		// get response
-		if (usbmuxd_get_result(sfd, use_tag, &res) && (res == 0)) {
+		if (usbmuxd_get_result(sfd, use_tag, &res, NULL) && (res == 0)) {
 			listen_success = 1;
 		} else {
 			UNLOCK;
@@ -903,7 +918,7 @@ retry:
 	} else {
 		// read ACK
 		DEBUG(2, "%s: Reading connect result...\n", __func__);
-		if (usbmuxd_get_result(sfd, use_tag, &res)) {
+		if (usbmuxd_get_result(sfd, use_tag, &res, NULL)) {
 			if (res == 0) {
 				DEBUG(2, "%s: Connect success!\n", __func__);
 				connected = 1;
