@@ -97,6 +97,7 @@ static int listenfd = -1;
 static int use_tag = 0;
 #ifdef HAVE_PLIST
 static int proto_version = 1;
+static int try_list_devices = 1;
 #else
 static int proto_version = 0;
 #endif
@@ -128,6 +129,49 @@ static int connect_usbmuxd_socket()
 	return connect_unix_socket(USBMUXD_SOCKET_FILE);
 #endif
 }
+
+#ifdef HAVE_PLIST
+static struct usbmuxd_device_record* device_record_from_plist(plist_t props)
+{
+	struct usbmuxd_device_record* dev = NULL;
+	plist_t n = NULL;
+	uint64_t val = 0;
+	char *strval = NULL;
+
+	dev = (struct usbmuxd_device_record*)malloc(sizeof(struct usbmuxd_device_record));
+	if (!dev)
+		return NULL;
+	memset(dev, 0, sizeof(struct usbmuxd_device_record));
+
+	n = plist_dict_get_item(props, "DeviceID");
+	if (n && plist_get_node_type(n) == PLIST_UINT) {
+		plist_get_uint_val(n, &val);
+		dev->device_id = (uint32_t)val;
+	}
+
+	n = plist_dict_get_item(props, "ProductID");
+	if (n && plist_get_node_type(n) == PLIST_UINT) {
+		plist_get_uint_val(n, &val);
+		dev->product_id = (uint32_t)val;
+	}
+
+	n = plist_dict_get_item(props, "SerialNumber");
+	if (n && plist_get_node_type(n) == PLIST_STRING) {
+		plist_get_string_val(n, &strval);
+		if (strval) {
+			strncpy(dev->serial_number, strval, 255);
+			free(strval);
+		}
+	}
+	n = plist_dict_get_item(props, "LocationID");
+	if (n && plist_get_node_type(n) == PLIST_UINT) {
+		plist_get_uint_val(n, &val);
+		dev->location = (uint32_t)val;
+	}
+
+	return dev;
+}
+#endif
 
 static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload, int timeout)
 {
@@ -200,27 +244,14 @@ static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload
 					plist_free(plist);
 					return -EBADMSG;
 				}
-				dev = (struct usbmuxd_device_record*)malloc(sizeof(struct usbmuxd_device_record));
-				memset(dev, 0, sizeof(struct usbmuxd_device_record));
 
-				plist_t n = plist_dict_get_item(props, "DeviceID");
-				plist_get_uint_val(n, &val);
-				dev->device_id = (uint32_t)val;
-
-				n = plist_dict_get_item(props, "ProductID");
-				plist_get_uint_val(n, &val);
-				dev->product_id = (uint32_t)val;
-
-				n = plist_dict_get_item(props, "SerialNumber");
-				char *strval = NULL;
-				plist_get_string_val(n, &strval);
-				if (strval) {
-					strncpy(dev->serial_number, strval, 255);
-					free(strval);
+				dev = device_record_from_plist(props);
+				if (!dev) {
+					DEBUG(1, "%s: Could not create device record object from properties!\n", __func__);
+					free(message);
+					plist_free(plist);
+					return -EBADMSG;
 				}
-				n = plist_dict_get_item(props, "LocationID");
-				plist_get_uint_val(n, &val);
-				dev->location = (uint32_t)val;
 				*payload = (void*)dev;
 				hdr.length = sizeof(hdr) + sizeof(struct usbmuxd_device_record);
 				hdr.message = MESSAGE_DEVICE_ADD;
@@ -415,6 +446,21 @@ static int send_connect_packet(int sfd, uint32_t tag, uint32_t device_id, uint16
 	}
 	return res;
 }
+
+#ifdef HAVE_PLIST
+static int send_list_devices_packet(int sfd, uint32_t tag)
+{
+	int res = -1;
+
+	/* construct message plist */
+	plist_t plist = create_plist_message("ListDevices");
+
+	res = send_plist_packet(sfd, tag, plist);
+	plist_free(plist);
+
+	return res;
+}
+#endif
 
 /**
  * Generates an event, i.e. calls the callback function.
@@ -727,6 +773,29 @@ int usbmuxd_unsubscribe()
 	return 0;
 }
 
+static usbmuxd_device_info_t *device_info_from_device_record(struct usbmuxd_device_record *dev)
+{
+	if (!dev) {
+		return NULL;
+	}
+	usbmuxd_device_info_t *devinfo = (usbmuxd_device_info_t*)malloc(sizeof(usbmuxd_device_info_t));
+	if (!devinfo) {
+		DEBUG(1, "%s: Out of memory!\n", __func__);
+		return NULL;
+	}
+
+	devinfo->handle = dev->device_id;
+	devinfo->product_id = dev->product_id;
+	memset(devinfo->udid, '\0', sizeof(devinfo->udid));
+	memcpy(devinfo->udid, dev->serial_number, sizeof(devinfo->udid));
+
+	if (strcasecmp(devinfo->udid, "ffffffffffffffffffffffffffffffffffffffff") == 0) {
+		sprintf(devinfo->udid + 32, "%08x", devinfo->handle);
+	}
+
+	return devinfo;
+}
+
 int usbmuxd_get_device_list(usbmuxd_device_info_t **device_list)
 {
 	int sfd;
@@ -752,6 +821,43 @@ retry:
 
 	use_tag++;
 	LOCK;
+#ifdef HAVE_PLIST
+	if ((proto_version == 1) && (try_list_devices)) {
+		if (send_list_devices_packet(sfd, use_tag) > 0) {
+			plist_t list = NULL;
+			if (usbmuxd_get_result(sfd, use_tag, &res, &list) && (res == 0)) {
+				plist_t devlist = plist_dict_get_item(list, "DeviceList");
+				if (devlist && plist_get_node_type(devlist) == PLIST_ARRAY) {
+					collection_init(&tmpdevs);
+					uint32_t numdevs = plist_array_get_size(devlist);
+					uint32_t i;
+					for (i = 0; i < numdevs; i++) {
+						plist_t pdev = plist_array_get_item(devlist, i);
+						plist_t props = plist_dict_get_item(pdev, "Properties");
+						dev = device_record_from_plist(props);
+						usbmuxd_device_info_t *devinfo = device_info_from_device_record(dev);
+						if (!devinfo) {
+							UNLOCK;
+							DEBUG(1, "%s: can't create device info object\n", __func__);
+							free(payload);
+							return -1;
+						}
+						collection_add(&tmpdevs, devinfo);
+					}
+					goto got_device_list;
+				}
+			} else {
+				if (res == RESULT_BADVERSION) {
+					proto_version = 0;
+				}
+				UNLOCK;
+				close_socket(sfd);
+				try_list_devices = 0;
+				goto retry;
+			}
+		}
+	}
+#endif
 	if (send_listen_packet(sfd, use_tag) > 0) {
 		res = -1;
 		// get response
@@ -784,23 +890,14 @@ retry:
 		if (receive_packet(sfd, &hdr, &payload, 100) > 0) {
 			if (hdr.message == MESSAGE_DEVICE_ADD) {
 				dev = payload;
-				usbmuxd_device_info_t *devinfo = (usbmuxd_device_info_t*)malloc(sizeof(usbmuxd_device_info_t));
+
+				usbmuxd_device_info_t *devinfo = device_info_from_device_record(dev);
 				if (!devinfo) {
 					UNLOCK;
-					DEBUG(1, "%s: Out of memory!\n", __func__);
+					DEBUG(1, "%s: can't create device info object\n", __func__);
 					free(payload);
 					return -1;
 				}
-
-				devinfo->handle = dev->device_id;
-				devinfo->product_id = dev->product_id;
-				memset(devinfo->udid, '\0', sizeof(devinfo->udid));
-				memcpy(devinfo->udid, dev->serial_number, sizeof(devinfo->udid));
-
-				if (strcasecmp(devinfo->udid, "ffffffffffffffffffffffffffffffffffffffff") == 0) {
-					sprintf(devinfo->udid + 32, "%08x", devinfo->handle);
-				}
-
 				collection_add(&tmpdevs, devinfo);
 
 			} else if (hdr.message == MESSAGE_DEVICE_REMOVE) {
@@ -830,6 +927,9 @@ retry:
 			break;
 		}
 	}
+#ifdef HAVE_PLIST
+got_device_list:
+#endif
 	UNLOCK;
 
 	// explicitly close connection
