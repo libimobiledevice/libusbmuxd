@@ -1101,7 +1101,7 @@ int usbmuxd_read_buid(char **buid)
 	proto_version = 1;
 	use_tag++;
 	if (send_read_buid_packet(sfd, use_tag) <= 0) {
-		DEBUG(1, "%s: Error sending connect message!\n", __func__);
+		DEBUG(1, "%s: Error sending ReadBUID message!\n", __func__);
 	} else {
 		uint32_t rc = 0;
 		plist_t pl = NULL;
@@ -1142,7 +1142,7 @@ int usbmuxd_read_pair_record(const char* record_id, char **record_data, uint32_t
 	use_tag++;
 
 	if (send_pair_record_packet(sfd, use_tag, "ReadPairRecord", record_id, NULL) <= 0) {
-		DEBUG(1, "%s: Error sending connect message!\n", __func__);
+		DEBUG(1, "%s: Error sending ReadPairRecord message!\n", __func__);
 	} else {
 		uint32_t rc = 0;
 		plist_t pl = NULL;
@@ -1187,7 +1187,7 @@ int usbmuxd_save_pair_record(const char* record_id, const char *record_data, uin
 
 	plist_t data = plist_new_data(record_data, record_size);
 	if (send_pair_record_packet(sfd, use_tag, "SavePairRecord", record_id, data) <= 0) {
-		DEBUG(1, "%s: Error sending connect message!\n", __func__);
+		DEBUG(1, "%s: Error sending SavePairRecord message!\n", __func__);
 	} else {
 		uint32_t rc = 0;
 		if (usbmuxd_get_result(sfd, use_tag, &rc, NULL)) {
@@ -1222,7 +1222,7 @@ int usbmuxd_delete_pair_record(const char* record_id)
 	use_tag++;
 
 	if (send_pair_record_packet(sfd, use_tag, "DeletePairRecord", record_id, NULL) <= 0) {
-		DEBUG(1, "%s: Error sending connect message!\n", __func__);
+		DEBUG(1, "%s: Error sending DeletePairRecord message!\n", __func__);
 	} else {
 		uint32_t rc = 0;
 		if (usbmuxd_get_result(sfd, use_tag, &rc, NULL)) {
