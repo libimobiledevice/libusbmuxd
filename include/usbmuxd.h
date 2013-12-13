@@ -175,6 +175,16 @@ int usbmuxd_recv_timeout(int sfd, char *data, uint32_t len, uint32_t *recv_bytes
 int usbmuxd_recv(int sfd, char *data, uint32_t len, uint32_t *recv_bytes);
 
 /**
+ * Reads the SystemBUID
+ *
+ * @param buid pointer to a variable that will be set to point to a newly
+ *     allocated string with the System BUID returned by usbmuxd
+ *
+ * @return 0 on success, a negative errno value otherwise.
+ */
+int usbmuxd_read_buid(char** buid);
+
+/**
  * Enable or disable the use of inotify extension. Enabled by default.
  * Use 0 to disable and 1 to enable inotify support.
  * This only has an effect on linux systems if inotify support has been built

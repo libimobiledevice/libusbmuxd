@@ -439,6 +439,19 @@ static int send_list_devices_packet(int sfd, uint32_t tag)
 	return res;
 }
 
+static int send_read_buid_packet(int sfd, uint32_t tag)
+{
+	int res = -1;
+
+	/* construct message plist */
+	plist_t plist = create_plist_message("ReadBUID");
+
+	res = send_plist_packet(sfd, tag, plist);
+	plist_free(plist);
+
+	return res;
+}
+
 /**
  * Generates an event, i.e. calls the callback function.
  * A reference to a populated usbmuxd_event_t with information about the event
@@ -1050,6 +1063,44 @@ int usbmuxd_recv_timeout(int sfd, char *data, uint32_t len, uint32_t *recv_bytes
 int usbmuxd_recv(int sfd, char *data, uint32_t len, uint32_t *recv_bytes)
 {
 	return usbmuxd_recv_timeout(sfd, data, len, recv_bytes, 5000);
+}
+
+int usbmuxd_read_buid(char **buid)
+{
+	int sfd;
+	int ret = 0;
+
+	if (!buid) {
+		return -EINVAL;
+	}
+	*buid = NULL;
+
+	sfd = connect_usbmuxd_socket();
+	if (sfd < 0) {
+		DEBUG(1, "%s: Error: Connection to usbmuxd failed: %s\n", __func__, strerror(errno));
+		return sfd;
+	}
+
+	proto_version = 1;
+	use_tag++;
+	if (send_read_buid_packet(sfd, use_tag) <= 0) {
+		DEBUG(1, "%s: Error sending connect message!\n", __func__);
+	} else {
+		uint32_t rc = 0;
+		plist_t pl = NULL;
+		if (usbmuxd_get_result(sfd, use_tag, &rc, &pl)) {
+			plist_t node = plist_dict_get_item(pl, "BUID");
+			if (node && plist_get_node_type(node) == PLIST_STRING) {
+				plist_get_string_val(node, buid);
+			}
+		} else {
+			ret = -(int)rc;
+		}
+		if (pl)
+			plist_free(pl);
+	}
+
+	return ret;
 }
 
 void libusbmuxd_set_use_inotify(int set)
