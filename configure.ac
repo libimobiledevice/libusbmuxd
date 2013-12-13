@@ -26,29 +26,8 @@ AM_PROG_CC_C_O
 AC_PROG_LIBTOOL
 
 # Checks for libraries.
-PKG_CHECK_MODULES(libplist, libplist >= 1.9, have_plist=yes, have_plist=no)
+PKG_CHECK_MODULES(libplist, libplist >= 1.11)
 AC_CHECK_HEADERS([sys/inotify.h], have_inotify=yes, have_inotify=no)
-
-AC_ARG_WITH([protov1],
-            [AS_HELP_STRING([--without-protov1],
-            [do not build with protocol v1 support (default is yes)])],
-            [with_protov1=no],
-            [with_protov1=yes])
-
-if test "x$have_plist" = "xyes"; then
-  if test "x$with_protov1" != "xyes"; then
-    have_plist=no
-    echo "*** Note: Protocol V1 support has been disabled ***"
-  else
-    AC_DEFINE(HAVE_PLIST, 1, [Define if you have libplist support])
-    AC_SUBST(libplist_CFLAGS)
-    AC_SUBST(libplist_LIBS)
-  fi
-else
-  if test "x$with_protov1" == "xyes"; then
-    AC_MSG_ERROR([protocol V1 support requested but libplist could not be found])
-  fi
-fi
 
 AC_ARG_WITH([inotify],
             [AS_HELP_STRING([--without-inotify],
@@ -120,7 +99,6 @@ Configuration for $PACKAGE $VERSION:
 -------------------------------------------
 
   Install prefix: .........: $prefix
-  Protocol v1 support: ....: $have_plist
   inotify support (Linux) .: $have_inotify
 
   Now type 'make' to build $PACKAGE $VERSION,

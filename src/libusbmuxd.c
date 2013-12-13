@@ -58,13 +58,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <unistd.h>
 #include <signal.h>
 
-#ifdef HAVE_PLIST
 #include <plist/plist.h>
 #define PLIST_BUNDLE_ID "com.marcansoft.usbmuxd"
 #define PLIST_CLIENT_VERSION_STRING "usbmuxd built for freedom"
 #define PLIST_PROGNAME "libusbmuxd"
 #define PLIST_LIBUSBMUX_VERSION 3
-#endif
 
 // usbmuxd public interface
 #include "usbmuxd.h"
@@ -95,12 +93,8 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static int listenfd = -1;
 
 static int use_tag = 0;
-#ifdef HAVE_PLIST
 static int proto_version = 1;
 static int try_list_devices = 1;
-#else
-static int proto_version = 0;
-#endif
 
 /**
  * Finds a device info record by its handle.
@@ -130,7 +124,6 @@ static int connect_usbmuxd_socket()
 #endif
 }
 
-#ifdef HAVE_PLIST
 static struct usbmuxd_device_record* device_record_from_plist(plist_t props)
 {
 	struct usbmuxd_device_record* dev = NULL;
@@ -171,7 +164,6 @@ static struct usbmuxd_device_record* device_record_from_plist(plist_t props)
 
 	return dev;
 }
-#endif
 
 static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload, int timeout)
 {
@@ -201,7 +193,6 @@ static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload
 		}
 	}
 
-#ifdef HAVE_PLIST
 	if (hdr.message == MESSAGE_PLIST) {
 		char *message = NULL;
 		plist_t plist = NULL;
@@ -276,9 +267,7 @@ static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload
 			free(message);
 		}
 		plist_free(plist);
-	} else
-#endif
-	{
+	} else {
 		*payload = payload_loc;
 	}
 
@@ -326,9 +315,7 @@ static int usbmuxd_get_result(int sfd, uint32_t tag, uint32_t *result, void **re
 		if (res)
 			free(res);
 		return ret;
-	}
-#ifdef HAVE_PLIST
-	else if (hdr.message == MESSAGE_PLIST) {
+	} else if (hdr.message == MESSAGE_PLIST) {
 		if (!result_plist) {
 			DEBUG(1, "%s: MESSAGE_PLIST result but result_plist pointer is NULL!\n", __func__);
 			return -1;
@@ -337,7 +324,7 @@ static int usbmuxd_get_result(int sfd, uint32_t tag, uint32_t *result, void **re
 		*result = RESULT_OK;
 		return 1;
 	}
-#endif
+
 	DEBUG(1, "%s: Unexpected message of type %d received!\n", __func__, hdr.message);
 	if (res)
 		free(res);
@@ -371,7 +358,6 @@ static int send_packet(int sfd, uint32_t message, uint32_t tag, void *payload, u
 	return sent;
 }
 
-#ifdef HAVE_PLIST
 static int send_plist_packet(int sfd, uint32_t tag, plist_t message)
 {
 	int res;
@@ -395,21 +381,17 @@ static plist_t create_plist_message(const char* message_type)
 	plist_dict_insert_item(plist, "kLibUSBMuxVersion", plist_new_uint(PLIST_LIBUSBMUX_VERSION));
 	return plist;
 }
-#endif
 
 static int send_listen_packet(int sfd, uint32_t tag)
 {
 	int res = 0;
-#ifdef HAVE_PLIST
 	if (proto_version == 1) {
 		/* construct message plist */
 		plist_t plist = create_plist_message("Listen");
 
 		res = send_plist_packet(sfd, tag, plist);
 		plist_free(plist);
-	} else
-#endif
-	{
+	} else {
 		/* binary packet */
 		res = send_packet(sfd, MESSAGE_LISTEN, tag, NULL, 0);
 	}
@@ -419,7 +401,6 @@ static int send_listen_packet(int sfd, uint32_t tag)
 static int send_connect_packet(int sfd, uint32_t tag, uint32_t device_id, uint16_t port)
 {
 	int res = 0;
-#ifdef HAVE_PLIST
 	if (proto_version == 1) {
 		/* construct message plist */
 		plist_t plist = create_plist_message("Connect");
@@ -428,9 +409,7 @@ static int send_connect_packet(int sfd, uint32_t tag, uint32_t device_id, uint16
 
 		res = send_plist_packet(sfd, tag, plist);
 		plist_free(plist);
-	} else
-#endif
-	{
+	} else {
 		/* binary packet */
 		struct {
 			uint32_t device_id;
@@ -447,7 +426,6 @@ static int send_connect_packet(int sfd, uint32_t tag, uint32_t device_id, uint16
 	return res;
 }
 
-#ifdef HAVE_PLIST
 static int send_list_devices_packet(int sfd, uint32_t tag)
 {
 	int res = -1;
@@ -460,7 +438,6 @@ static int send_list_devices_packet(int sfd, uint32_t tag)
 
 	return res;
 }
-#endif
 
 /**
  * Generates an event, i.e. calls the callback function.
@@ -569,9 +546,7 @@ static int usbmuxd_listen()
 	int sfd;
 	uint32_t res = -1;
 
-#ifdef HAVE_PLIST
 retry:
-#endif
 
 #ifdef HAVE_INOTIFY
 	sfd = usbmuxd_listen_inotify();
@@ -597,12 +572,10 @@ retry:
 	if (usbmuxd_get_result(sfd, use_tag, &res, NULL) && (res != 0)) {
 		UNLOCK;
 		close_socket(sfd);
-#ifdef HAVE_PLIST
 		if ((res == RESULT_BADVERSION) && (proto_version == 1)) {
 			proto_version = 0;
 			goto retry;
 		}
-#endif
 		DEBUG(1, "%s: ERROR: did not get OK but %d\n", __func__, res);
 		return -1;
 	}
@@ -810,9 +783,7 @@ int usbmuxd_get_device_list(usbmuxd_device_info_t **device_list)
 
 	*device_list = NULL;
 
-#ifdef HAVE_PLIST
 retry:
-#endif
 	sfd = connect_usbmuxd_socket();
 	if (sfd < 0) {
 		DEBUG(1, "%s: error opening socket!\n", __func__);
@@ -821,7 +792,6 @@ retry:
 
 	use_tag++;
 	LOCK;
-#ifdef HAVE_PLIST
 	if ((proto_version == 1) && (try_list_devices)) {
 		if (send_list_devices_packet(sfd, use_tag) > 0) {
 			plist_t list = NULL;
@@ -857,7 +827,7 @@ retry:
 			}
 		}
 	}
-#endif
+
 	if (send_listen_packet(sfd, use_tag) > 0) {
 		res = -1;
 		// get response
@@ -866,12 +836,10 @@ retry:
 		} else {
 			UNLOCK;
 			close_socket(sfd);
-#ifdef HAVE_PLIST
 			if ((res == RESULT_BADVERSION) && (proto_version == 1)) {
 				proto_version = 0;
 				goto retry;
 			}
-#endif
 			DEBUG(1, "%s: Did not get response to scan request (with result=0)...\n", __func__);
 			return res;
 		}
@@ -927,9 +895,8 @@ retry:
 			break;
 		}
 	}
-#ifdef HAVE_PLIST
+
 got_device_list:
-#endif
 	UNLOCK;
 
 	// explicitly close connection
@@ -1002,9 +969,7 @@ int usbmuxd_connect(const int handle, const unsigned short port)
 	int connected = 0;
 	uint32_t res = -1;
 
-#ifdef HAVE_PLIST
 retry:
-#endif
 	sfd = connect_usbmuxd_socket();
 	if (sfd < 0) {
 		DEBUG(1, "%s: Error: Connection to usbmuxd failed: %s\n",
@@ -1023,13 +988,11 @@ retry:
 				DEBUG(2, "%s: Connect success!\n", __func__);
 				connected = 1;
 			} else {
-#ifdef HAVE_PLIST
 				if ((res == RESULT_BADVERSION) && (proto_version == 1)) {
 					proto_version = 0;
 					close_socket(sfd);
 					goto retry;
 				}
-#endif
 				DEBUG(1, "%s: Connect failed, Error code=%d\n", __func__, res);
 			}
 		}
