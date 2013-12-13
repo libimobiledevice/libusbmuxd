@@ -185,6 +185,39 @@ int usbmuxd_recv(int sfd, char *data, uint32_t len, uint32_t *recv_bytes);
 int usbmuxd_read_buid(char** buid);
 
 /**
+ * Read a pairing record
+ *
+ * @param record_id the record identifier of the pairing record to retrieve
+ * @param record_data pointer to a variable that will be set to point to a
+ *     newly allocated buffer containing the pairing record data
+ * @param record_size pointer to a variable that will be set to the size of
+ *     the buffer returned in record_data
+ *
+ * @return 0 on success, a negative error value otherwise.
+ */
+int usbmuxd_read_pair_record(const char* record_id, char **record_data, uint32_t *record_size);
+
+/**
+ * Save a pairing record
+ *
+ * @param record_id the record identifier of the pairing record to save
+ * @param record_data buffer containing the pairing record data
+ * @param record_size size of the buffer passed in record_data
+ *
+ * @return 0 on success, a negative error value otherwise.
+ */
+int usbmuxd_save_pair_record(const char* record_id, const char *record_data, uint32_t record_size);
+
+/**
+ * Delete a pairing record
+ *
+ * @param record_id the record identifier of the pairing record to delete.
+ *
+ * @return 0 on success, a negative errno value otherwise.
+ */
+int usbmuxd_delete_pair_record(const char* record_id);
+
+/**
  * Enable or disable the use of inotify extension. Enabled by default.
  * Use 0 to disable and 1 to enable inotify support.
  * This only has an effect on linux systems if inotify support has been built

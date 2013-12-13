@@ -452,6 +452,23 @@ static int send_read_buid_packet(int sfd, uint32_t tag)
 	return res;
 }
 
+static int send_pair_record_packet(int sfd, uint32_t tag, const char* msgtype, const char* pair_record_id, plist_t data)
+{
+	int res = -1;
+
+	/* construct message plist */
+	plist_t plist = create_plist_message(msgtype);
+	plist_dict_insert_item(plist, "PairRecordID", plist_new_string(pair_record_id));
+	if (data) {
+		plist_dict_insert_item(plist, "PairRecordData", plist_copy(data));
+	}
+	
+	res = send_plist_packet(sfd, tag, plist);
+	plist_free(plist);
+
+	return res;
+}
+
 /**
  * Generates an event, i.e. calls the callback function.
  * A reference to a populated usbmuxd_event_t with information about the event
@@ -1098,6 +1115,122 @@ int usbmuxd_read_buid(char **buid)
 		}
 		if (pl)
 			plist_free(pl);
+	}
+
+	return ret;
+}
+
+int usbmuxd_read_pair_record(const char* record_id, char **record_data, uint32_t *record_size)
+{
+	int sfd;
+	int ret = -1;
+
+	if (!record_id || !record_data || !record_size) {
+		return -EINVAL;
+	}
+	*record_data = NULL;
+	*record_size = 0;
+
+	sfd = connect_usbmuxd_socket();
+	if (sfd < 0) {
+		DEBUG(1, "%s: Error: Connection to usbmuxd failed: %s\n",
+				__func__, strerror(errno));
+		return sfd;
+	}
+
+	proto_version = 1;
+	use_tag++;
+
+	if (send_pair_record_packet(sfd, use_tag, "ReadPairRecord", record_id, NULL) <= 0) {
+		DEBUG(1, "%s: Error sending connect message!\n", __func__);
+	} else {
+		uint32_t rc = 0;
+		plist_t pl = NULL;
+		if (usbmuxd_get_result(sfd, use_tag, &rc, &pl)) {
+			plist_t node = plist_dict_get_item(pl, "PairRecordData");
+			if (node && plist_get_node_type(node) == PLIST_DATA) {
+				uint64_t int64val = 0;
+				plist_get_data_val(node, record_data, &int64val);
+				if (record_data && int64val > 0) {
+					*record_size = (uint32_t)int64val;
+					ret = 0;
+				}
+			}
+		} else {
+			ret = -(int)rc;
+		}
+		if (pl)
+			plist_free(pl);
+	}
+
+	return ret;
+}
+
+int usbmuxd_save_pair_record(const char* record_id, const char *record_data, uint32_t record_size)
+{
+	int sfd;
+	int ret = -1;
+
+	if (!record_id || !record_data || !record_size) {
+		return -EINVAL;
+	}
+
+	sfd = connect_usbmuxd_socket();
+	if (sfd < 0) {
+		DEBUG(1, "%s: Error: Connection to usbmuxd failed: %s\n",
+				__func__, strerror(errno));
+		return sfd;
+	}
+
+	proto_version = 1;
+	use_tag++;
+
+	plist_t data = plist_new_data(record_data, record_size);
+	if (send_pair_record_packet(sfd, use_tag, "SavePairRecord", record_id, data) <= 0) {
+		DEBUG(1, "%s: Error sending connect message!\n", __func__);
+	} else {
+		uint32_t rc = 0;
+		if (usbmuxd_get_result(sfd, use_tag, &rc, NULL)) {
+			ret = 0;
+		} else {
+			ret = -(int)rc;
+			DEBUG(1, "%s: Error: saving pair record failed: %d\n", __func__, ret);
+		}
+	}
+	plist_free(data);
+
+	return ret;
+}
+
+int usbmuxd_delete_pair_record(const char* record_id)
+{
+	int sfd;
+	int ret = -1;
+
+	if (!record_id) {
+		return -EINVAL;
+	}
+
+	sfd = connect_usbmuxd_socket();
+	if (sfd < 0) {
+		DEBUG(1, "%s: Error: Connection to usbmuxd failed: %s\n",
+				__func__, strerror(errno));
+		return sfd;
+	}
+
+	proto_version = 1;
+	use_tag++;
+
+	if (send_pair_record_packet(sfd, use_tag, "DeletePairRecord", record_id, NULL) <= 0) {
+		DEBUG(1, "%s: Error sending connect message!\n", __func__);
+	} else {
+		uint32_t rc = 0;
+		if (usbmuxd_get_result(sfd, use_tag, &rc, NULL)) {
+			ret = 0;
+		} else {
+			ret = -(int)rc;
+			DEBUG(1, "%s: Error: deleting pair record failed: %d\n", __func__, ret);
+		}
 	}
 
 	return ret;
