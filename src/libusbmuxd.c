@@ -1105,7 +1105,7 @@ int usbmuxd_read_buid(char **buid)
 	} else {
 		uint32_t rc = 0;
 		plist_t pl = NULL;
-		if (usbmuxd_get_result(sfd, use_tag, &rc, &pl)) {
+		if (usbmuxd_get_result(sfd, use_tag, &rc, &pl) && (rc == 0)) {
 			plist_t node = plist_dict_get_item(pl, "BUID");
 			if (node && plist_get_node_type(node) == PLIST_STRING) {
 				plist_get_string_val(node, buid);
@@ -1146,7 +1146,7 @@ int usbmuxd_read_pair_record(const char* record_id, char **record_data, uint32_t
 	} else {
 		uint32_t rc = 0;
 		plist_t pl = NULL;
-		if (usbmuxd_get_result(sfd, use_tag, &rc, &pl)) {
+		if (usbmuxd_get_result(sfd, use_tag, &rc, &pl) && (rc == 0)) {
 			plist_t node = plist_dict_get_item(pl, "PairRecordData");
 			if (node && plist_get_node_type(node) == PLIST_DATA) {
 				uint64_t int64val = 0;
@@ -1190,7 +1190,7 @@ int usbmuxd_save_pair_record(const char* record_id, const char *record_data, uin
 		DEBUG(1, "%s: Error sending SavePairRecord message!\n", __func__);
 	} else {
 		uint32_t rc = 0;
-		if (usbmuxd_get_result(sfd, use_tag, &rc, NULL)) {
+		if (usbmuxd_get_result(sfd, use_tag, &rc, NULL) && (rc == 0)) {
 			ret = 0;
 		} else {
 			ret = -(int)rc;
@@ -1225,7 +1225,7 @@ int usbmuxd_delete_pair_record(const char* record_id)
 		DEBUG(1, "%s: Error sending DeletePairRecord message!\n", __func__);
 	} else {
 		uint32_t rc = 0;
-		if (usbmuxd_get_result(sfd, use_tag, &rc, NULL)) {
+		if (usbmuxd_get_result(sfd, use_tag, &rc, NULL) && (rc == 0)) {
 			ret = 0;
 		} else {
 			ret = -(int)rc;
