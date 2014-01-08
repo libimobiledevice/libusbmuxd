@@ -74,7 +74,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "collection.h"
 
 static int libusbmuxd_debug = 0;
-#define DEBUG(x, y, ...) if (x <= libusbmuxd_debug) fprintf(stderr, (y), __VA_ARGS__);
+#define DEBUG(x, y, ...) if (x <= libusbmuxd_debug) fprintf(stderr, (y), __VA_ARGS__); fflush(stderr);
 
 static struct collection devices;
 static usbmuxd_event_cb_t event_cb = NULL;
@@ -92,9 +92,9 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 static int listenfd = -1;
 
-static int use_tag = 0;
-static int proto_version = 1;
-static int try_list_devices = 1;
+static volatile int use_tag = 0;
+static volatile int proto_version = 1;
+static volatile int try_list_devices = 1;
 
 /**
  * Finds a device info record by its handle.
@@ -308,7 +308,10 @@ static int usbmuxd_get_result(int sfd, uint32_t tag, uint32_t *result, void **re
 
 	if (hdr.message == MESSAGE_RESULT) {
 		int ret = 0;
-		if (res && (hdr.tag == tag)) {
+		if (hdr.tag != tag) {
+			DEBUG(1, "%s: WARNING: tag mismatch (%d != %d). Proceeding anyway.\n", __func__, hdr.tag, tag);
+		}
+		if (res) {
 			memcpy(result, res, sizeof(uint32_t));
 			ret = 1;
 		}
@@ -575,6 +578,7 @@ static int usbmuxd_listen()
 {
 	int sfd;
 	uint32_t res = -1;
+	int tag;
 
 retry:
 
@@ -591,15 +595,15 @@ retry:
 		return sfd;
 	}
 
-	use_tag++;
+	tag = ++use_tag;
 	LOCK;
-	if (send_listen_packet(sfd, use_tag) <= 0) {
+	if (send_listen_packet(sfd, tag) <= 0) {
 		UNLOCK;
 		DEBUG(1, "%s: ERROR: could not send listen packet\n", __func__);
 		close_socket(sfd);
 		return -1;
 	}
-	if (usbmuxd_get_result(sfd, use_tag, &res, NULL) && (res != 0)) {
+	if (usbmuxd_get_result(sfd, tag, &res, NULL) && (res != 0)) {
 		UNLOCK;
 		close_socket(sfd);
 		if ((res == RESULT_BADVERSION) && (proto_version == 1)) {
@@ -802,6 +806,7 @@ static usbmuxd_device_info_t *device_info_from_device_record(struct usbmuxd_devi
 int usbmuxd_get_device_list(usbmuxd_device_info_t **device_list)
 {
 	int sfd;
+	int tag;
 	int listen_success = 0;
 	uint32_t res;
 	struct collection tmpdevs;
@@ -820,12 +825,12 @@ retry:
 		return sfd;
 	}
 
-	use_tag++;
+	tag = ++use_tag;
 	LOCK;
 	if ((proto_version == 1) && (try_list_devices)) {
-		if (send_list_devices_packet(sfd, use_tag) > 0) {
+		if (send_list_devices_packet(sfd, tag) > 0) {
 			plist_t list = NULL;
-			if (usbmuxd_get_result(sfd, use_tag, &res, &list) && (res == 0)) {
+			if (usbmuxd_get_result(sfd, tag, &res, &list) && (res == 0)) {
 				plist_t devlist = plist_dict_get_item(list, "DeviceList");
 				if (devlist && plist_get_node_type(devlist) == PLIST_ARRAY) {
 					collection_init(&tmpdevs);
@@ -858,10 +863,11 @@ retry:
 		}
 	}
 
-	if (send_listen_packet(sfd, use_tag) > 0) {
+	tag = ++use_tag;
+	if (send_listen_packet(sfd, tag) > 0) {
 		res = -1;
 		// get response
-		if (usbmuxd_get_result(sfd, use_tag, &res, NULL) && (res == 0)) {
+		if (usbmuxd_get_result(sfd, tag, &res, NULL) && (res == 0)) {
 			listen_success = 1;
 		} else {
 			UNLOCK;
@@ -996,6 +1002,7 @@ int usbmuxd_get_device_by_udid(const char *udid, usbmuxd_device_info_t *device)
 int usbmuxd_connect(const int handle, const unsigned short port)
 {
 	int sfd;
+	int tag;
 	int connected = 0;
 	uint32_t res = -1;
 
@@ -1007,13 +1014,13 @@ retry:
 		return sfd;
 	}
 
-	use_tag++;
-	if (send_connect_packet(sfd, use_tag, (uint32_t)handle, (uint16_t)port) <= 0) {
+	tag = ++use_tag;
+	if (send_connect_packet(sfd, tag, (uint32_t)handle, (uint16_t)port) <= 0) {
 		DEBUG(1, "%s: Error sending connect message!\n", __func__);
 	} else {
 		// read ACK
 		DEBUG(2, "%s: Reading connect result...\n", __func__);
-		if (usbmuxd_get_result(sfd, use_tag, &res, NULL)) {
+		if (usbmuxd_get_result(sfd, tag, &res, NULL)) {
 			if (res == 0) {
 				DEBUG(2, "%s: Connect success!\n", __func__);
 				connected = 1;
@@ -1085,6 +1092,7 @@ int usbmuxd_recv(int sfd, char *data, uint32_t len, uint32_t *recv_bytes)
 int usbmuxd_read_buid(char **buid)
 {
 	int sfd;
+	int tag;
 	int ret = 0;
 
 	if (!buid) {
@@ -1099,13 +1107,13 @@ int usbmuxd_read_buid(char **buid)
 	}
 
 	proto_version = 1;
-	use_tag++;
-	if (send_read_buid_packet(sfd, use_tag) <= 0) {
+	tag = ++use_tag;
+	if (send_read_buid_packet(sfd, tag) <= 0) {
 		DEBUG(1, "%s: Error sending ReadBUID message!\n", __func__);
 	} else {
 		uint32_t rc = 0;
 		plist_t pl = NULL;
-		if (usbmuxd_get_result(sfd, use_tag, &rc, &pl) && (rc == 0)) {
+		if (usbmuxd_get_result(sfd, tag, &rc, &pl) && (rc == 0)) {
 			plist_t node = plist_dict_get_item(pl, "BUID");
 			if (node && plist_get_node_type(node) == PLIST_STRING) {
 				plist_get_string_val(node, buid);
@@ -1123,6 +1131,7 @@ int usbmuxd_read_buid(char **buid)
 int usbmuxd_read_pair_record(const char* record_id, char **record_data, uint32_t *record_size)
 {
 	int sfd;
+	int tag;
 	int ret = -1;
 
 	if (!record_id || !record_data || !record_size) {
@@ -1139,14 +1148,14 @@ int usbmuxd_read_pair_record(const char* record_id, char **record_data, uint32_t
 	}
 
 	proto_version = 1;
-	use_tag++;
+	tag = ++use_tag;
 
-	if (send_pair_record_packet(sfd, use_tag, "ReadPairRecord", record_id, NULL) <= 0) {
+	if (send_pair_record_packet(sfd, tag, "ReadPairRecord", record_id, NULL) <= 0) {
 		DEBUG(1, "%s: Error sending ReadPairRecord message!\n", __func__);
 	} else {
 		uint32_t rc = 0;
 		plist_t pl = NULL;
-		if (usbmuxd_get_result(sfd, use_tag, &rc, &pl) && (rc == 0)) {
+		if (usbmuxd_get_result(sfd, tag, &rc, &pl) && (rc == 0)) {
 			plist_t node = plist_dict_get_item(pl, "PairRecordData");
 			if (node && plist_get_node_type(node) == PLIST_DATA) {
 				uint64_t int64val = 0;
@@ -1169,6 +1178,7 @@ int usbmuxd_read_pair_record(const char* record_id, char **record_data, uint32_t
 int usbmuxd_save_pair_record(const char* record_id, const char *record_data, uint32_t record_size)
 {
 	int sfd;
+	int tag;
 	int ret = -1;
 
 	if (!record_id || !record_data || !record_size) {
@@ -1183,14 +1193,14 @@ int usbmuxd_save_pair_record(const char* record_id, const char *record_data, uin
 	}
 
 	proto_version = 1;
-	use_tag++;
+	tag = ++use_tag;
 
 	plist_t data = plist_new_data(record_data, record_size);
-	if (send_pair_record_packet(sfd, use_tag, "SavePairRecord", record_id, data) <= 0) {
+	if (send_pair_record_packet(sfd, tag, "SavePairRecord", record_id, data) <= 0) {
 		DEBUG(1, "%s: Error sending SavePairRecord message!\n", __func__);
 	} else {
 		uint32_t rc = 0;
-		if (usbmuxd_get_result(sfd, use_tag, &rc, NULL) && (rc == 0)) {
+		if (usbmuxd_get_result(sfd, tag, &rc, NULL) && (rc == 0)) {
 			ret = 0;
 		} else {
 			ret = -(int)rc;
@@ -1205,6 +1215,7 @@ int usbmuxd_save_pair_record(const char* record_id, const char *record_data, uin
 int usbmuxd_delete_pair_record(const char* record_id)
 {
 	int sfd;
+	int tag;
 	int ret = -1;
 
 	if (!record_id) {
@@ -1219,13 +1230,13 @@ int usbmuxd_delete_pair_record(const char* record_id)
 	}
 
 	proto_version = 1;
-	use_tag++;
+	tag = ++use_tag;
 
-	if (send_pair_record_packet(sfd, use_tag, "DeletePairRecord", record_id, NULL) <= 0) {
+	if (send_pair_record_packet(sfd, tag, "DeletePairRecord", record_id, NULL) <= 0) {
 		DEBUG(1, "%s: Error sending DeletePairRecord message!\n", __func__);
 	} else {
 		uint32_t rc = 0;
-		if (usbmuxd_get_result(sfd, use_tag, &rc, NULL) && (rc == 0)) {
+		if (usbmuxd_get_result(sfd, tag, &rc, NULL) && (rc == 0)) {
 			ret = 0;
 		} else {
 			ret = -(int)rc;
