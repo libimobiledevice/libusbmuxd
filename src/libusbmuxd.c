@@ -80,15 +80,8 @@ static struct collection devices;
 static usbmuxd_event_cb_t event_cb = NULL;
 #ifdef WIN32
 HANDLE devmon = NULL;
-CRITICAL_SECTION mutex;
-static int mutex_initialized = 0;
-#define LOCK if (!mutex_initialized) { InitializeCriticalSection(&mutex); mutex_initialized = 1; } EnterCriticalSection(&mutex);
-#define UNLOCK LeaveCriticalSection(&mutex);
 #else
 pthread_t devmon;
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-#define LOCK pthread_mutex_lock(&mutex)
-#define UNLOCK pthread_mutex_unlock(&mutex)	
 #endif
 static int listenfd = -1;
 
@@ -596,15 +589,12 @@ retry:
 	}
 
 	tag = ++use_tag;
-	LOCK;
 	if (send_listen_packet(sfd, tag) <= 0) {
-		UNLOCK;
 		DEBUG(1, "%s: ERROR: could not send listen packet\n", __func__);
 		close_socket(sfd);
 		return -1;
 	}
 	if (usbmuxd_get_result(sfd, tag, &res, NULL) && (res != 0)) {
-		UNLOCK;
 		close_socket(sfd);
 		if ((res == RESULT_BADVERSION) && (proto_version == 1)) {
 			proto_version = 0;
@@ -613,7 +603,6 @@ retry:
 		DEBUG(1, "%s: ERROR: did not get OK but %d\n", __func__, res);
 		return -1;
 	}
-	UNLOCK;
 
 	return sfd;
 }
@@ -826,7 +815,6 @@ retry:
 	}
 
 	tag = ++use_tag;
-	LOCK;
 	if ((proto_version == 1) && (try_list_devices)) {
 		if (send_list_devices_packet(sfd, tag) > 0) {
 			plist_t list = NULL;
@@ -842,7 +830,6 @@ retry:
 						dev = device_record_from_plist(props);
 						usbmuxd_device_info_t *devinfo = device_info_from_device_record(dev);
 						if (!devinfo) {
-							UNLOCK;
 							DEBUG(1, "%s: can't create device info object\n", __func__);
 							free(payload);
 							return -1;
@@ -855,7 +842,6 @@ retry:
 				if (res == RESULT_BADVERSION) {
 					proto_version = 0;
 				}
-				UNLOCK;
 				close_socket(sfd);
 				try_list_devices = 0;
 				goto retry;
@@ -870,7 +856,6 @@ retry:
 		if (usbmuxd_get_result(sfd, tag, &res, NULL) && (res == 0)) {
 			listen_success = 1;
 		} else {
-			UNLOCK;
 			close_socket(sfd);
 			if ((res == RESULT_BADVERSION) && (proto_version == 1)) {
 				proto_version = 0;
@@ -882,7 +867,6 @@ retry:
 	}
 
 	if (!listen_success) {
-		UNLOCK;
 		DEBUG(1, "%s: Could not send listen request!\n", __func__);
 		return -1;
 	}
@@ -897,7 +881,6 @@ retry:
 
 				usbmuxd_device_info_t *devinfo = device_info_from_device_record(dev);
 				if (!devinfo) {
-					UNLOCK;
 					DEBUG(1, "%s: can't create device info object\n", __func__);
 					free(payload);
 					return -1;
@@ -933,7 +916,6 @@ retry:
 	}
 
 got_device_list:
-	UNLOCK;
 
 	// explicitly close connection
 	close_socket(sfd);
