@@ -1,25 +1,23 @@
 /*
-	libusbmuxd - client library to talk to usbmuxd
-
-Copyright (C) 2009	Nikias Bassen <nikias@gmx.li>
-Copyright (C) 2009	Paul Sladen <libiphone@paul.sladen.org>
-Copyright (C) 2009	Martin Szulecki <opensuse@sukimashita.com>
-
-This library is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as
-published by the Free Software Foundation, either version 2.1 of the
-License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
-
-*/
+ * socket.c
+ *
+ * Copyright (c) 2012 Martin Szulecki All Rights Reserved.
+ * Copyright (c) 2012 Nikias Bassen All Rights Reserved.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA 
+ */
 
 #include <stdio.h>
 #include <stddef.h>
@@ -30,8 +28,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <sys/time.h>
 #include <sys/stat.h>
 #ifdef WIN32
-#include <windows.h>
 #include <winsock2.h>
+#include <windows.h>
 static int wsa_init = 0;
 #else
 #include <sys/socket.h>
@@ -40,19 +38,19 @@ static int wsa_init = 0;
 #include <netdb.h>
 #include <arpa/inet.h>
 #endif
-#include "sock_stuff.h"
+#include "socket.h"
 
 #define RECV_TIMEOUT 20000
 
 static int verbose = 0;
 
-void sock_stuff_set_verbose(int level)
+void socket_set_verbose(int level)
 {
 	verbose = level;
 }
 
 #ifndef WIN32
-int create_unix_socket(const char *filename)
+int socket_create_unix(const char *filename)
 {
 	struct sockaddr_un name;
 	int sock;
@@ -85,20 +83,20 @@ int create_unix_socket(const char *filename)
 
 	if (bind(sock, (struct sockaddr *) &name, size) < 0) {
 		perror("bind");
-		close_socket(sock);
+		socket_close(sock);
 		return -1;
 	}
 
 	if (listen(sock, 10) < 0) {
 		perror("listen");
-		close_socket(sock);
+		socket_close(sock);
 		return -1;
 	}
 
 	return sock;
 }
 
-int connect_unix_socket(const char *filename)
+int socket_connect_unix(const char *filename)
 {
 	struct sockaddr_un name;
 	int sfd = -1;
@@ -134,7 +132,7 @@ int connect_unix_socket(const char *filename)
 			+ strlen(name.sun_path) + 1);
 
 	if (connect(sfd, (struct sockaddr *) &name, size) < 0) {
-		close_socket(sfd);
+		socket_close(sfd);
 		if (verbose >= 2)
 			fprintf(stderr, "%s: connect: %s\n", __func__,
 					strerror(errno));
@@ -145,7 +143,7 @@ int connect_unix_socket(const char *filename)
 }
 #endif
 
-int create_socket(uint16_t port)
+int socket_create(uint16_t port)
 {
 	int sfd = -1;
 	int yes = 1;
@@ -168,7 +166,7 @@ int create_socket(uint16_t port)
 
 	if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, (void*)&yes, sizeof(int)) == -1) {
 		perror("setsockopt()");
-		close_socket(sfd);
+		socket_close(sfd);
 		return -1;
 	}
 
@@ -179,21 +177,20 @@ int create_socket(uint16_t port)
 
 	if (0 > bind(sfd, (struct sockaddr *) &saddr, sizeof(saddr))) {
 		perror("bind()");
-		close_socket(sfd);
+		socket_close(sfd);
 		return -1;
 	}
 
 	if (listen(sfd, 1) == -1) {
 		perror("listen()");
-		close_socket(sfd);
+		socket_close(sfd);
 		return -1;
 	}
 
 	return sfd;
 }
 
-#if defined(WIN32) || defined(__CYGWIN__)
-int connect_socket(const char *addr, uint16_t port)
+int socket_connect(const char *addr, uint16_t port)
 {
 	int sfd = -1;
 	int yes = 1;
@@ -235,7 +232,7 @@ int connect_socket(const char *addr, uint16_t port)
 
 	if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, (void*)&yes, sizeof(int)) == -1) {
 		perror("setsockopt()");
-		close_socket(sfd);
+		socket_close(sfd);
 		return -1;
 	}
 
@@ -246,15 +243,14 @@ int connect_socket(const char *addr, uint16_t port)
 
 	if (connect(sfd, (struct sockaddr *) &saddr, sizeof(saddr)) < 0) {
 		perror("connect");
-		close_socket(sfd);
+		socket_close(sfd);
 		return -2;
 	}
 
 	return sfd;
 }
-#endif /* WIN32 || __CYGWIN__ */
 
-int check_fd(int fd, fd_mode fdm, unsigned int timeout)
+int socket_check_fd(int fd, fd_mode fdm, unsigned int timeout)
 {
 	fd_set fds;
 	int sret;
@@ -321,12 +317,33 @@ int check_fd(int fd, fd_mode fdm, unsigned int timeout)
 	return sret;
 }
 
-int shutdown_socket(int fd, int how)
+int socket_accept(int fd, uint16_t port)
+{
+#ifdef WIN32
+	int addr_len;
+#else
+	socklen_t addr_len;
+#endif
+	int result;
+	struct sockaddr_in addr;
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	addr.sin_port = htons(port);
+
+	addr_len = sizeof(addr);
+	result = accept(fd, (struct sockaddr*)&addr, &addr_len);
+
+	return result;
+}
+
+int socket_shutdown(int fd, int how)
 {
 	return shutdown(fd, how);
 }
 
-int close_socket(int fd) {
+int socket_close(int fd) {
 #ifdef WIN32
 	return closesocket(fd);
 #else
@@ -334,24 +351,24 @@ int close_socket(int fd) {
 #endif
 }
 
-int recv_buf(int fd, void *data, size_t length)
+int socket_receive(int fd, void *data, size_t length)
 {
-	return recv_buf_timeout(fd, data, length, 0, RECV_TIMEOUT);
+	return socket_receive_timeout(fd, data, length, 0, RECV_TIMEOUT);
 }
 
-int peek_buf(int fd, void *data, size_t length)
+int socket_peek(int fd, void *data, size_t length)
 {
-	return recv_buf_timeout(fd, data, length, MSG_PEEK, RECV_TIMEOUT);
+	return socket_receive_timeout(fd, data, length, MSG_PEEK, RECV_TIMEOUT);
 }
 
-int recv_buf_timeout(int fd, void *data, size_t length, int flags,
+int socket_receive_timeout(int fd, void *data, size_t length, int flags,
 					 unsigned int timeout)
 {
 	int res;
 	int result;
 
 	// check if data is available
-	res = check_fd(fd, FDM_READ, timeout);
+	res = socket_check_fd(fd, FDM_READ, timeout);
 	if (res <= 0) {
 		return res;
 	}
@@ -369,7 +386,7 @@ int recv_buf_timeout(int fd, void *data, size_t length, int flags,
 	return result;
 }
 
-int send_buf(int fd, void *data, size_t length)
+int socket_send(int fd, void *data, size_t length)
 {
 	return send(fd, data, length, 0);
 }
