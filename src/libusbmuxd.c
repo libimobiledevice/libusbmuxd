@@ -59,7 +59,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <signal.h>
 
 #include <plist/plist.h>
-#define PLIST_BUNDLE_ID "com.marcansoft.usbmuxd"
+#define PLIST_BUNDLE_ID "org.libimobiledevice.usbmuxd"
 #define PLIST_CLIENT_VERSION_STRING "usbmuxd built for freedom"
 #define PLIST_PROGNAME "libusbmuxd"
 #define PLIST_LIBUSBMUX_VERSION 3
