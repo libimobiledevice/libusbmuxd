@@ -829,12 +829,15 @@ retry:
 						plist_t props = plist_dict_get_item(pdev, "Properties");
 						dev = device_record_from_plist(props);
 						usbmuxd_device_info_t *devinfo = device_info_from_device_record(dev);
+						free(dev);
 						if (!devinfo) {
 							DEBUG(1, "%s: can't create device info object\n", __func__);
+							plist_free(list);
 							return -1;
 						}
 						collection_add(&tmpdevs, devinfo);
 					}
+					plist_free(list);
 					goto got_device_list;
 				}
 			} else {
@@ -843,8 +846,10 @@ retry:
 				}
 				socket_close(sfd);
 				try_list_devices = 0;
+				plist_free(list);
 				goto retry;
 			}
+			plist_free(list);
 		}
 	}
 
@@ -1103,8 +1108,7 @@ int usbmuxd_read_buid(char **buid)
 		} else {
 			ret = -(int)rc;
 		}
-		if (pl)
-			plist_free(pl);
+		plist_free(pl);
 	}
 
 	return ret;
@@ -1150,8 +1154,7 @@ int usbmuxd_read_pair_record(const char* record_id, char **record_data, uint32_t
 		} else {
 			ret = -(int)rc;
 		}
-		if (pl)
-			plist_free(pl);
+		plist_free(pl);
 	}
 
 	return ret;
