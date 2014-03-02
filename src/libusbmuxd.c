@@ -831,7 +831,6 @@ retry:
 						usbmuxd_device_info_t *devinfo = device_info_from_device_record(dev);
 						if (!devinfo) {
 							DEBUG(1, "%s: can't create device info object\n", __func__);
-							free(payload);
 							return -1;
 						}
 						collection_add(&tmpdevs, devinfo);
