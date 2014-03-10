@@ -1043,7 +1043,7 @@ int usbmuxd_send(int sfd, const char *data, uint32_t len, uint32_t *sent_bytes)
 		return -EINVAL;
 	}
 	
-	num_sent = send(sfd, (void*)data, len, 0);
+	num_sent = socket_send(sfd, (void*)data, len);
 	if (num_sent < 0) {
 		*sent_bytes = 0;
 		num_sent = errno;
