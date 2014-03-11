@@ -55,6 +55,7 @@ int socket_create_unix(const char *filename)
 	struct sockaddr_un name;
 	int sock;
 	size_t size;
+	int yes = 1;
 
 	// remove if still present
 	unlink(filename);
@@ -65,6 +66,14 @@ int socket_create_unix(const char *filename)
 		perror("socket");
 		return -1;
 	}
+
+#ifdef SO_NOSIGPIPE
+	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, (void*)&yes, sizeof(int)) == -1) {
+		perror("setsockopt()");
+		socket_close(sock);
+		return -1;
+	}
+#endif
 
 	/* Bind a name to the socket. */
 	name.sun_family = AF_LOCAL;
@@ -102,6 +111,7 @@ int socket_connect_unix(const char *filename)
 	int sfd = -1;
 	size_t size;
 	struct stat fst;
+	int yes = 1;
 
 	// check if socket file exists...
 	if (stat(filename, &fst) != 0) {
@@ -123,6 +133,15 @@ int socket_connect_unix(const char *filename)
 			fprintf(stderr, "%s: socket: %s\n", __func__, strerror(errno));
 		return -1;
 	}
+
+#ifdef SO_NOSIGPIPE
+	if (setsockopt(sfd, SOL_SOCKET, SO_NOSIGPIPE, (void*)&yes, sizeof(int)) == -1) {
+		perror("setsockopt()");
+		socket_close(sfd);
+		return -1;
+	}
+#endif
+
 	// and connect to 'filename'
 	name.sun_family = AF_LOCAL;
 	strncpy(name.sun_path, filename, sizeof(name.sun_path));
@@ -169,6 +188,14 @@ int socket_create(uint16_t port)
 		socket_close(sfd);
 		return -1;
 	}
+
+#ifdef SO_NOSIGPIPE
+	if (setsockopt(sfd, SOL_SOCKET, SO_NOSIGPIPE, (void*)&yes, sizeof(int)) == -1) {
+		perror("setsockopt()");
+		socket_close(sfd);
+		return -1;
+	}
+#endif
 
 	memset((void *) &saddr, 0, sizeof(saddr));
 	saddr.sin_family = AF_INET;
@@ -235,6 +262,14 @@ int socket_connect(const char *addr, uint16_t port)
 		socket_close(sfd);
 		return -1;
 	}
+
+#ifdef SO_NOSIGPIPE
+	if (setsockopt(sfd, SOL_SOCKET, SO_NOSIGPIPE, (void*)&yes, sizeof(int)) == -1) {
+		perror("setsockopt()");
+		socket_close(sfd);
+		return -1;
+	}
+#endif
 
 	memset((void *) &saddr, 0, sizeof(saddr));
 	saddr.sin_family = AF_INET;
@@ -388,5 +423,9 @@ int socket_receive_timeout(int fd, void *data, size_t length, int flags,
 
 int socket_send(int fd, void *data, size_t length)
 {
-	return send(fd, data, length, 0);
+	int flags = 0;
+#ifdef MSG_NOSIGNAL
+	flags |= MSG_NOSIGNAL;
+#endif
+	return send(fd, data, length, flags);
 }
