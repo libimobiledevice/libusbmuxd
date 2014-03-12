@@ -55,7 +55,9 @@ int socket_create_unix(const char *filename)
 	struct sockaddr_un name;
 	int sock;
 	size_t size;
+#ifdef SO_NOSIGPIPE
 	int yes = 1;
+#endif
 
 	// remove if still present
 	unlink(filename);
@@ -111,7 +113,9 @@ int socket_connect_unix(const char *filename)
 	int sfd = -1;
 	size_t size;
 	struct stat fst;
+#ifdef SO_NOSIGPIPE
 	int yes = 1;
+#endif
 
 	// check if socket file exists...
 	if (stat(filename, &fst) != 0) {
