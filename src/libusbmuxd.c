@@ -370,11 +370,11 @@ static int send_plist_packet(int sfd, uint32_t tag, plist_t message)
 static plist_t create_plist_message(const char* message_type)
 {
 	plist_t plist = plist_new_dict();
-	plist_dict_insert_item(plist, "BundleID", plist_new_string(PLIST_BUNDLE_ID));
-	plist_dict_insert_item(plist, "ClientVersionString", plist_new_string(PLIST_CLIENT_VERSION_STRING));
-	plist_dict_insert_item(plist, "MessageType", plist_new_string(message_type));
-	plist_dict_insert_item(plist, "ProgName", plist_new_string(PLIST_PROGNAME));	
-	plist_dict_insert_item(plist, "kLibUSBMuxVersion", plist_new_uint(PLIST_LIBUSBMUX_VERSION));
+	plist_dict_set_item(plist, "BundleID", plist_new_string(PLIST_BUNDLE_ID));
+	plist_dict_set_item(plist, "ClientVersionString", plist_new_string(PLIST_CLIENT_VERSION_STRING));
+	plist_dict_set_item(plist, "MessageType", plist_new_string(message_type));
+	plist_dict_set_item(plist, "ProgName", plist_new_string(PLIST_PROGNAME));	
+	plist_dict_set_item(plist, "kLibUSBMuxVersion", plist_new_uint(PLIST_LIBUSBMUX_VERSION));
 	return plist;
 }
 
@@ -400,8 +400,8 @@ static int send_connect_packet(int sfd, uint32_t tag, uint32_t device_id, uint16
 	if (proto_version == 1) {
 		/* construct message plist */
 		plist_t plist = create_plist_message("Connect");
-		plist_dict_insert_item(plist, "DeviceID", plist_new_uint(device_id));
-		plist_dict_insert_item(plist, "PortNumber", plist_new_uint(htons(port)));
+		plist_dict_set_item(plist, "DeviceID", plist_new_uint(device_id));
+		plist_dict_set_item(plist, "PortNumber", plist_new_uint(htons(port)));
 
 		res = send_plist_packet(sfd, tag, plist);
 		plist_free(plist);
@@ -454,9 +454,9 @@ static int send_pair_record_packet(int sfd, uint32_t tag, const char* msgtype, c
 
 	/* construct message plist */
 	plist_t plist = create_plist_message(msgtype);
-	plist_dict_insert_item(plist, "PairRecordID", plist_new_string(pair_record_id));
+	plist_dict_set_item(plist, "PairRecordID", plist_new_string(pair_record_id));
 	if (data) {
-		plist_dict_insert_item(plist, "PairRecordData", plist_copy(data));
+		plist_dict_set_item(plist, "PairRecordData", plist_copy(data));
 	}
 	
 	res = send_plist_packet(sfd, tag, plist);
