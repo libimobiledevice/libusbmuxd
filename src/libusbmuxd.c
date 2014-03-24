@@ -287,10 +287,10 @@ static int usbmuxd_get_result(int sfd, uint32_t tag, uint32_t *result, void **re
 	}
 
 	if ((recv_len = receive_packet(sfd, &hdr, (void**)&res, 5000)) < 0) {
-		DEBUG(1, "%s: Error receiving packet: %d\n", __func__, errno);
+		DEBUG(1, "%s: Error receiving packet: %d\n", __func__, recv_len);
 		if (res)
 			free(res);
-		return -errno;
+		return recv_len;
 	}
 	if ((size_t)recv_len < sizeof(hdr)) {
 		DEBUG(1, "%s: Received packet is too small!\n", __func__);
@@ -594,7 +594,7 @@ retry:
 		socket_close(sfd);
 		return -1;
 	}
-	if (usbmuxd_get_result(sfd, tag, &res, NULL) && (res != 0)) {
+	if ((usbmuxd_get_result(sfd, tag, &res, NULL) == 1) && (res != 0)) {
 		socket_close(sfd);
 		if ((res == RESULT_BADVERSION) && (proto_version == 1)) {
 			proto_version = 0;
@@ -603,7 +603,6 @@ retry:
 		DEBUG(1, "%s: ERROR: did not get OK but %d\n", __func__, res);
 		return -1;
 	}
-
 	return sfd;
 }
 
@@ -818,7 +817,7 @@ retry:
 	if ((proto_version == 1) && (try_list_devices)) {
 		if (send_list_devices_packet(sfd, tag) > 0) {
 			plist_t list = NULL;
-			if (usbmuxd_get_result(sfd, tag, &res, &list) && (res == 0)) {
+			if ((usbmuxd_get_result(sfd, tag, &res, &list) == 1) && (res == 0)) {
 				plist_t devlist = plist_dict_get_item(list, "DeviceList");
 				if (devlist && plist_get_node_type(devlist) == PLIST_ARRAY) {
 					collection_init(&tmpdevs);
@@ -857,7 +856,7 @@ retry:
 	if (send_listen_packet(sfd, tag) > 0) {
 		res = -1;
 		// get response
-		if (usbmuxd_get_result(sfd, tag, &res, NULL) && (res == 0)) {
+		if ((usbmuxd_get_result(sfd, tag, &res, NULL) == 1) && (res == 0)) {
 			listen_success = 1;
 		} else {
 			socket_close(sfd);
@@ -1006,7 +1005,7 @@ retry:
 	} else {
 		// read ACK
 		DEBUG(2, "%s: Reading connect result...\n", __func__);
-		if (usbmuxd_get_result(sfd, tag, &res, NULL)) {
+		if (usbmuxd_get_result(sfd, tag, &res, NULL) == 1) {
 			if (res == 0) {
 				DEBUG(2, "%s: Connect success!\n", __func__);
 				connected = 1;
@@ -1100,12 +1099,13 @@ int usbmuxd_read_buid(char **buid)
 	} else {
 		uint32_t rc = 0;
 		plist_t pl = NULL;
-		if (usbmuxd_get_result(sfd, tag, &rc, &pl) && (rc == 0)) {
+		ret = usbmuxd_get_result(sfd, tag, &rc, &pl);
+		if ((ret == 1) && (rc == 0)) {
 			plist_t node = plist_dict_get_item(pl, "BUID");
 			if (node && plist_get_node_type(node) == PLIST_STRING) {
 				plist_get_string_val(node, buid);
 			}
-		} else {
+		} else if (ret == 1) {
 			ret = -(int)rc;
 		}
 		plist_free(pl);
@@ -1141,7 +1141,8 @@ int usbmuxd_read_pair_record(const char* record_id, char **record_data, uint32_t
 	} else {
 		uint32_t rc = 0;
 		plist_t pl = NULL;
-		if (usbmuxd_get_result(sfd, tag, &rc, &pl) && (rc == 0)) {
+		ret = usbmuxd_get_result(sfd, tag, &rc, &pl);
+		if ((ret == 1) && (rc == 0)) {
 			plist_t node = plist_dict_get_item(pl, "PairRecordData");
 			if (node && plist_get_node_type(node) == PLIST_DATA) {
 				uint64_t int64val = 0;
@@ -1151,7 +1152,7 @@ int usbmuxd_read_pair_record(const char* record_id, char **record_data, uint32_t
 					ret = 0;
 				}
 			}
-		} else {
+		} else if (ret == 1) {
 			ret = -(int)rc;
 		}
 		plist_free(pl);
@@ -1185,9 +1186,10 @@ int usbmuxd_save_pair_record(const char* record_id, const char *record_data, uin
 		DEBUG(1, "%s: Error sending SavePairRecord message!\n", __func__);
 	} else {
 		uint32_t rc = 0;
-		if (usbmuxd_get_result(sfd, tag, &rc, NULL) && (rc == 0)) {
+		ret = usbmuxd_get_result(sfd, tag, &rc, NULL);
+		if ((ret == 1) && (rc == 0)) {
 			ret = 0;
-		} else {
+		} else if (ret == 1) {
 			ret = -(int)rc;
 			DEBUG(1, "%s: Error: saving pair record failed: %d\n", __func__, ret);
 		}
@@ -1221,9 +1223,10 @@ int usbmuxd_delete_pair_record(const char* record_id)
 		DEBUG(1, "%s: Error sending DeletePairRecord message!\n", __func__);
 	} else {
 		uint32_t rc = 0;
-		if (usbmuxd_get_result(sfd, tag, &rc, NULL) && (rc == 0)) {
+		ret = usbmuxd_get_result(sfd, tag, &rc, NULL);
+		if ((ret == 1) && (rc == 0)) {
 			ret = 0;
-		} else {
+		} else if (ret == 1) {
 			ret = -(int)rc;
 			DEBUG(1, "%s: Error: deleting pair record failed: %d\n", __func__, ret);
 		}
