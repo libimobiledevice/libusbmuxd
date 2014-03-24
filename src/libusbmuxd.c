@@ -179,8 +179,16 @@ static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload
 	uint32_t payload_size = hdr.length - sizeof(hdr);
 	if (payload_size > 0) {
 		payload_loc = (char*)malloc(payload_size);
-		if (socket_receive_timeout(sfd, payload_loc, payload_size, 0, 5000) != (int)payload_size) {
-			DEBUG(1, "%s: Error receiving payload of size %d\n", __func__, payload_size);
+		uint32_t rsize = 0;
+		do {
+			int res = socket_receive_timeout(sfd, payload_loc + rsize, payload_size - rsize, 0, 5000);
+			if (res < 0) {
+				break;
+			}
+			rsize += res;
+		} while (rsize < payload_size);
+		if (rsize != payload_size) {
+			DEBUG(1, "%s: Error receiving payload of size %d (bytes received: %d)\n", __func__, payload_size, rsize);
 			free(payload_loc);
 			return -EBADMSG;
 		}
@@ -344,10 +352,18 @@ static int send_packet(int sfd, uint32_t message, uint32_t tag, void *payload, u
 		return -1;
 	}
 	if (payload && (payload_size > 0)) {
-		sent += socket_send(sfd, payload, payload_size);
+		uint32_t ssize = 0;
+		do {
+			int res = socket_send(sfd, (char*)payload + ssize, payload_size - ssize);
+			if (res < 0) {
+				break;
+			}
+			ssize += res;
+		} while (ssize < payload_size);
+		sent += ssize;
 	}
 	if (sent != (int)header.length) {
-		DEBUG(1, "%s: ERROR: could not send whole packet\n", __func__);
+		DEBUG(1, "%s: ERROR: could not send whole packet (sent %d of %d)\n", __func__, sent, header.length);
 		socket_close(sfd);
 		return -1;
 	}
