@@ -297,7 +297,7 @@ int socket_check_fd(int fd, fd_mode fdm, unsigned int timeout)
 	struct timeval to;
 	struct timeval *pto;
 
-	if (fd <= 0) {
+	if (fd < 0) {
 		if (verbose >= 2)
 			fprintf(stderr, "ERROR: invalid fd in check_fd %d\n", fd);
 		return -1;
