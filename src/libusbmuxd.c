@@ -792,7 +792,9 @@ USBMUXD_API int usbmuxd_unsubscribe()
 	}
 #else
 	if (pthread_kill(devmon, 0) == 0) {
-		pthread_cancel(devmon);
+#ifndef __ANDROID__
+        pthread_cancel(devmon);
+#endif
 		pthread_join(devmon, NULL);
 	}
 #endif
