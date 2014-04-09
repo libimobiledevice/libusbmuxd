@@ -824,7 +824,9 @@ USBMUXD_API int usbmuxd_unsubscribe()
 #else
 	res = pthread_kill(devmon, 0);
 	if (res == 0) {
-		pthread_cancel(devmon);
+#ifndef __ANDROID__
+        pthread_cancel(devmon);
+#endif
 		res = pthread_join(devmon, NULL);
 	}
 	if ((res != 0) && (res != ESRCH)) {
