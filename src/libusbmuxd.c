@@ -846,6 +846,7 @@ retry:
 						usbmuxd_device_info_t *devinfo = device_info_from_device_record(dev);
 						free(dev);
 						if (!devinfo) {
+							socket_close(sfd);
 							DEBUG(1, "%s: can't create device info object\n", __func__);
 							plist_free(list);
 							return -1;
@@ -886,6 +887,7 @@ retry:
 	}
 
 	if (!listen_success) {
+		socket_close(sfd);
 		DEBUG(1, "%s: Could not send listen request!\n", __func__);
 		return -1;
 	}
@@ -900,6 +902,7 @@ retry:
 
 				usbmuxd_device_info_t *devinfo = device_info_from_device_record(dev);
 				if (!devinfo) {
+					socket_close(sfd);
 					DEBUG(1, "%s: can't create device info object\n", __func__);
 					free(payload);
 					return -1;
