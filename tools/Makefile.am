@@ -6,5 +6,5 @@ bin_PROGRAMS = iproxy
 iproxy_SOURCES = iproxy.c
 iproxy_CFLAGS = $(AM_CFLAGS)
 iproxy_LDFLAGS = $(AM_LDFLAGS)
-iproxy_LDADD = ../src/libusbmuxd.la
+iproxy_LDADD = $(top_builddir)/src/libusbmuxd.la
 
