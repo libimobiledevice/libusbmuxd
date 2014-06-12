@@ -1167,7 +1167,7 @@ int usbmuxd_read_pair_record(const char* record_id, char **record_data, uint32_t
 			if (node && plist_get_node_type(node) == PLIST_DATA) {
 				uint64_t int64val = 0;
 				plist_get_data_val(node, record_data, &int64val);
-				if (record_data && int64val > 0) {
+				if (*record_data && int64val > 0) {
 					*record_size = (uint32_t)int64val;
 					ret = 0;
 				}
