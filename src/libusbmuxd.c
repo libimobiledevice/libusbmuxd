@@ -1098,7 +1098,7 @@ int usbmuxd_read_buid(char **buid)
 {
 	int sfd;
 	int tag;
-	int ret = 0;
+	int ret = -1;
 
 	if (!buid) {
 		return -EINVAL;
@@ -1124,6 +1124,7 @@ int usbmuxd_read_buid(char **buid)
 			if (node && plist_get_node_type(node) == PLIST_STRING) {
 				plist_get_string_val(node, buid);
 			}
+			ret = 0;
 		} else if (ret == 1) {
 			ret = -(int)rc;
 		}
