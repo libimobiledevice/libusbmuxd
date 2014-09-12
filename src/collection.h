@@ -20,8 +20,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
 
-#ifndef __COLLECTION_H__
-#define __COLLECTION_H__
+#ifndef COLLECTION_H
+#define COLLECTION_H
 
 struct collection {
 	void **list;

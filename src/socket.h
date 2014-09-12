@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA 
  */
 
-#ifndef __SOCKET_SOCKET_H
-#define __SOCKET_SOCKET_H
+#ifndef SOCKET_SOCKET_H
+#define SOCKET_SOCKET_H
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -62,4 +62,4 @@ int socket_send(int fd, void *data, size_t size);
 
 void socket_set_verbose(int level);
 
-#endif	/* __SOCKET_SOCKET_H */
+#endif	/* SOCKET_SOCKET_H */

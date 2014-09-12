@@ -21,8 +21,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
 
-#ifndef __USBMUXD_H
-#define __USBMUXD_H
+#ifndef USBMUXD_H
+#define USBMUXD_H
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -231,4 +231,4 @@ void libusbmuxd_set_debug_level(int level);
 }
 #endif
 
-#endif /* __USBMUXD_H */
+#endif /* USBMUXD_H */
