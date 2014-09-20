@@ -46,6 +46,7 @@ typedef unsigned int socklen_t;
 
 static uint16_t listen_port = 0;
 static uint16_t device_port = 0;
+static char* device_udid = NULL;
 
 struct client_data {
 	int fd;
@@ -186,9 +187,30 @@ static void *acceptor_thread(void *arg)
 		return NULL;
 	}
 
-	fprintf(stdout, "Requesting connecion to device handle == %d (serial: %s), port %d\n", dev_list[0].handle, dev_list[0].udid, device_port);
+	usbmuxd_device_info_t *dev = NULL;
+    if (device_udid) {
+        int i;
+        for (i = 0; i < count; i++) {
+            if (strncmp(dev_list[i].udid, device_udid, sizeof(dev_list[0].udid)) == 0) {
+                dev = &(dev_list[i]);
+                break;
+            }
+        }
+    }
+    else {
+        dev = &(dev_list[0]);
+    }
 
-	cdata->sfd = usbmuxd_connect(dev_list[0].handle, device_port);
+    if (dev == NULL || dev->handle == 0) {
+		printf("No connected/matching device found, terminating.\n");
+		free(dev_list);
+        return NULL;
+    }
+
+	fprintf(stdout, "Requesting connecion to device handle == %d (serial: %s), port %d\n", 
+            dev->handle, dev->udid, device_port);
+
+	cdata->sfd = usbmuxd_connect(dev->handle, device_port);
 	free(dev_list);
 	if (cdata->sfd < 0) {
 		fprintf(stderr, "Error connecting to device!\n");
@@ -218,13 +240,17 @@ int main(int argc, char **argv)
 {
 	int mysock = -1;
 
-	if (argc != 3) {
-		printf("usage: %s LOCAL_TCP_PORT DEVICE_TCP_PORT\n", argv[0]);
+	if (argc < 3) {
+		printf("usage: %s LOCAL_TCP_PORT DEVICE_TCP_PORT [UDID]\n", argv[0]);
 		return 0;
 	}
 
 	listen_port = atoi(argv[1]);
 	device_port = atoi(argv[2]);
+
+    if (argc > 3) {
+        device_udid = argv[3];
+    }
 
 	if (!listen_port) {
 		fprintf(stderr, "Invalid listen_port specified!\n");
