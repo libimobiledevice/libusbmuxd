@@ -168,6 +168,7 @@ static void *acceptor_thread(void *arg)
 
 	if (!arg) {
 		fprintf(stderr, "invalid client_data provided!\n");
+		free(arg);
 		return NULL;
 	}
 
@@ -176,6 +177,7 @@ static void *acceptor_thread(void *arg)
 	if ((count = usbmuxd_get_device_list(&dev_list)) < 0) {
 		printf("Connecting to usbmuxd failed, terminating.\n");
 		free(dev_list);
+		free(cdata);
 		return NULL;
 	}
 
@@ -184,31 +186,33 @@ static void *acceptor_thread(void *arg)
 	if (dev_list == NULL || dev_list[0].handle == 0) {
 		printf("No connected device found, terminating.\n");
 		free(dev_list);
+		free(cdata);
 		return NULL;
 	}
 
 	usbmuxd_device_info_t *dev = NULL;
-    if (device_udid) {
-        int i;
-        for (i = 0; i < count; i++) {
-            if (strncmp(dev_list[i].udid, device_udid, sizeof(dev_list[0].udid)) == 0) {
-                dev = &(dev_list[i]);
-                break;
-            }
-        }
-    }
-    else {
-        dev = &(dev_list[0]);
-    }
+	if (device_udid) {
+		int i;
+		for (i = 0; i < count; i++) {
+			if (strncmp(dev_list[i].udid, device_udid, sizeof(dev_list[0].udid)) == 0) {
+				dev = &(dev_list[i]);
+				break;
+			}
+		}
+	}
+	else {
+		dev = &(dev_list[0]);
+	}
 
-    if (dev == NULL || dev->handle == 0) {
+	if (dev == NULL || dev->handle == 0) {
 		printf("No connected/matching device found, terminating.\n");
 		free(dev_list);
-        return NULL;
-    }
+		free(cdata);
+		return NULL;
+	}
 
 	fprintf(stdout, "Requesting connecion to device handle == %d (serial: %s), port %d\n", 
-            dev->handle, dev->udid, device_port);
+			dev->handle, dev->udid, device_port);
 
 	cdata->sfd = usbmuxd_connect(dev->handle, device_port);
 	free(dev_list);
@@ -233,6 +237,7 @@ static void *acceptor_thread(void *arg)
 		close(cdata->sfd);
 	}
 
+	free(cdata);
 	return NULL;
 }
 
@@ -248,9 +253,9 @@ int main(int argc, char **argv)
 	listen_port = atoi(argv[1]);
 	device_port = atoi(argv[2]);
 
-    if (argc > 3) {
-        device_udid = argv[3];
-    }
+	if (argc > 3) {
+		device_udid = argv[3];
+	}
 
 	if (!listen_port) {
 		fprintf(stderr, "Invalid listen_port specified!\n");
@@ -275,21 +280,29 @@ int main(int argc, char **argv)
 #endif
 		struct sockaddr_in c_addr;
 		socklen_t len = sizeof(struct sockaddr_in);
-		struct client_data cdata;
+		struct client_data* cdata;
 		int c_sock;
 		while (1) {
 			printf("waiting for connection\n");
 			c_sock = accept(mysock, (struct sockaddr*)&c_addr, &len);
 			if (c_sock) {
 				printf("accepted connection, fd = %d\n", c_sock);
-				cdata.fd = c_sock;
+				cdata = (struct client_data*)malloc(sizeof(struct client_data));
+				if (cdata == NULL) {
+					close(c_sock);
+				}
+				else {
+					cdata->fd = c_sock;
 #ifdef WIN32
-				acceptor = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)acceptor_thread, &cdata, 0, NULL);
-				WaitForSingleObject(acceptor, INFINITE);
+					acceptor = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)acceptor_thread, cdata, 0, NULL);
+					WaitForSingleObject(acceptor, INFINITE);
 #else
-				pthread_create(&acceptor, NULL, acceptor_thread, &cdata);
-				pthread_join(acceptor, NULL);
+					pthread_create(&acceptor, NULL, acceptor_thread, cdata);
+					//pthread_join(acceptor, NULL);
+					// indicate to the implementation that storage for the thread thread can be reclaimed when the thread terminates.
+					pthread_detach(acceptor);
 #endif
+				}
 			} else {
 				break;
 			}
