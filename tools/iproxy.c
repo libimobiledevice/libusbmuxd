@@ -201,8 +201,11 @@ static void *acceptor_thread(void *arg)
 	}
 
 	if (dev == NULL || dev->handle == 0) {
-		printf("No connected/matching device found, terminating.\n");
+		printf("No connected/matching device found, disconnecting client.\n");
 		free(dev_list);
+		if (cdata->fd > 0) {
+			close(cdata->fd);
+		}
 		return NULL;
 	}
 
