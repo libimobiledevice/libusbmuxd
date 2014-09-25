@@ -176,6 +176,9 @@ static void *acceptor_thread(void *arg)
 	if ((count = usbmuxd_get_device_list(&dev_list)) < 0) {
 		printf("Connecting to usbmuxd failed, terminating.\n");
 		free(dev_list);
+		if (cdata->fd > 0) {
+			close(cdata->fd);
+		}
 		return NULL;
 	}
 
@@ -184,6 +187,9 @@ static void *acceptor_thread(void *arg)
 	if (dev_list == NULL || dev_list[0].handle == 0) {
 		printf("No connected device found, terminating.\n");
 		free(dev_list);
+		if (cdata->fd > 0) {
+			close(cdata->fd);
+		}
 		return NULL;
 	}
 
