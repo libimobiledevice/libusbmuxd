@@ -179,6 +179,7 @@ static void *acceptor_thread(void *arg)
 		if (cdata->fd > 0) {
 			close(cdata->fd);
 		}
+		free(cdata);
 		return NULL;
 	}
 
@@ -190,6 +191,7 @@ static void *acceptor_thread(void *arg)
 		if (cdata->fd > 0) {
 			close(cdata->fd);
 		}
+		free(cdata);
 		return NULL;
 	}
 
@@ -212,6 +214,7 @@ static void *acceptor_thread(void *arg)
 		if (cdata->fd > 0) {
 			close(cdata->fd);
 		}
+		free(cdata);
 		return NULL;
 	}
 
@@ -239,6 +242,7 @@ static void *acceptor_thread(void *arg)
 	if (cdata->sfd > 0) {
 		close(cdata->sfd);
 	}
+	free(cdata);
 
 	return NULL;
 }
@@ -282,20 +286,26 @@ int main(int argc, char **argv)
 #endif
 		struct sockaddr_in c_addr;
 		socklen_t len = sizeof(struct sockaddr_in);
-		struct client_data cdata;
+		struct client_data *cdata;
 		int c_sock;
 		while (1) {
 			printf("waiting for connection\n");
 			c_sock = accept(mysock, (struct sockaddr*)&c_addr, &len);
 			if (c_sock) {
 				printf("accepted connection, fd = %d\n", c_sock);
-				cdata.fd = c_sock;
+				cdata = (struct client_data*)malloc(sizeof(struct client_data));
+				if (!cdata) {
+					close(c_sock);
+					fprintf(stderr, "ERROR: Out of memory\n");
+					return -1;
+				}
+				cdata->fd = c_sock;
 #ifdef WIN32
-				acceptor = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)acceptor_thread, &cdata, 0, NULL);
-				WaitForSingleObject(acceptor, INFINITE);
+				acceptor = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)acceptor_thread, cdata, 0, NULL);
+				CloseHandle(acceptor);
 #else
-				pthread_create(&acceptor, NULL, acceptor_thread, &cdata);
-				pthread_join(acceptor, NULL);
+				pthread_create(&acceptor, NULL, acceptor_thread, cdata);
+				pthread_detach(acceptor);
 #endif
 			} else {
 				break;
