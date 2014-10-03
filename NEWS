@@ -2,11 +2,13 @@ Version 1.0.10
 ~~~~~~~~~~~~~~
 
 * Changes:
+  - Avoid exporting non-public symbols
+  - Allow multiple connections to iproxy listen port
   - Add ability to target device by UDID to iproxy
   - Remove outdated/unmaintained Python and sftp examples
   - Update README and rename license to more generic COPYING
   - Rename header guards according to C++ standard
-  - Fix a few crashers related to using old usbmuxd daemon and broken pair
+  - Fix a few crashes related to using old usbmuxd daemon and broken pair
     records
   - Fix out of tree build
   - Fix leaking socket handles by properly closing them
