@@ -88,7 +88,7 @@ static void *run_stoc_loop(void *arg)
 		}
 	}
 
-	close(cdata->fd);
+	socket_close(cdata->fd);
 
 	cdata->fd = -1;
 	cdata->stop_ctos = 1;
@@ -141,7 +141,7 @@ static void *run_ctos_loop(void *arg)
 		}
 	}
 
-	close(cdata->fd);
+	socket_close(cdata->fd);
 
 	cdata->fd = -1;
 	cdata->stop_stoc = 1;
@@ -177,7 +177,7 @@ static void *acceptor_thread(void *arg)
 		printf("Connecting to usbmuxd failed, terminating.\n");
 		free(dev_list);
 		if (cdata->fd > 0) {
-			close(cdata->fd);
+			socket_close(cdata->fd);
 		}
 		free(cdata);
 		return NULL;
@@ -189,7 +189,7 @@ static void *acceptor_thread(void *arg)
 		printf("No connected device found, terminating.\n");
 		free(dev_list);
 		if (cdata->fd > 0) {
-			close(cdata->fd);
+			socket_close(cdata->fd);
 		}
 		free(cdata);
 		return NULL;
@@ -212,7 +212,7 @@ static void *acceptor_thread(void *arg)
 		printf("No connected/matching device found, disconnecting client.\n");
 		free(dev_list);
 		if (cdata->fd > 0) {
-			close(cdata->fd);
+			socket_close(cdata->fd);
 		}
 		free(cdata);
 		return NULL;
@@ -237,10 +237,10 @@ static void *acceptor_thread(void *arg)
 	}
 
 	if (cdata->fd > 0) {
-		close(cdata->fd);
+		socket_close(cdata->fd);
 	}
 	if (cdata->sfd > 0) {
-		close(cdata->sfd);
+		socket_close(cdata->sfd);
 	}
 	free(cdata);
 
@@ -284,18 +284,16 @@ int main(int argc, char **argv)
 #else
 		pthread_t acceptor;
 #endif
-		struct sockaddr_in c_addr;
-		socklen_t len = sizeof(struct sockaddr_in);
 		struct client_data *cdata;
 		int c_sock;
 		while (1) {
 			printf("waiting for connection\n");
-			c_sock = accept(mysock, (struct sockaddr*)&c_addr, &len);
+			c_sock = socket_accept(mysock, listen_port);
 			if (c_sock) {
 				printf("accepted connection, fd = %d\n", c_sock);
 				cdata = (struct client_data*)malloc(sizeof(struct client_data));
 				if (!cdata) {
-					close(c_sock);
+					socket_close(c_sock);
 					fprintf(stderr, "ERROR: Out of memory\n");
 					return -1;
 				}
@@ -311,8 +309,8 @@ int main(int argc, char **argv)
 				break;
 			}
 		}
-		close(c_sock);
-		close(mysock);
+		socket_close(c_sock);
+		socket_close(mysock);
 	}
 
 	return 0;
