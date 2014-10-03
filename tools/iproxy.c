@@ -71,7 +71,7 @@ static void *run_stoc_loop(void *arg)
 				// try again
 				continue;
 			} else {
-				fprintf(stderr, "recv failed: %s\n", strerror(errno));
+				fprintf(stderr, "recv failed: %s\n", strerror(-recv_len));
 				break;
 			}
 		} else {
@@ -124,7 +124,7 @@ static void *run_ctos_loop(void *arg)
 				// try again
 				continue;
 			} else {
-			fprintf(stderr, "recv failed: %s\n", strerror(errno));
+				fprintf(stderr, "recv failed: %s\n", strerror(-recv_len));
 				break;
 			}
 		} else {
