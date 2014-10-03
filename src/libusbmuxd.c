@@ -30,10 +30,14 @@
 #include <config.h>
 #endif
 
-#ifdef HAVE_FVISIBILITY
-#define USBMUXD_API __attribute__((visibility("default")))
+#ifdef WIN32
+  #define USBMUXD_API __declspec( dllexport )
 #else
-#define USBMUXD_API
+  #ifdef HAVE_FVISIBILITY
+    #define USBMUXD_API __attribute__((visibility("default")))
+  #else
+    #define USBMUXD_API
+  #endif
 #endif
 
 #ifdef WIN32
