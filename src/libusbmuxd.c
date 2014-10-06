@@ -572,7 +572,7 @@ static int usbmuxd_listen_inotify()
 			/* check that it's ours */
 			if (pevent->mask & IN_CREATE &&
 			    pevent->len &&
-			    pevent->name != NULL &&
+			    pevent->name[0] != 0 &&
 			    strcmp(pevent->name, USBMUXD_SOCKET_NAME) == 0) {
 				sfd = connect_usbmuxd_socket ();
 				goto end;
