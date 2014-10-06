@@ -1,9 +1,9 @@
 /*
  * libusbmuxd.c
  *
- * Copyright (C) 2009-2010 Nikias Bassen <nikias@gmx.li>
+ * Copyright (C) 2009-2014 Martin Szulecki <m.szulecki@libimobiledevice.org>
+ * Copyright (C) 2009-2014 Nikias Bassen <nikias@gmx.li>
  * Copyright (C) 2009 Paul Sladen <libiphone@paul.sladen.org>
- * Copyright (C) 2009 Martin Szulecki <opensuse@sukimashita.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
