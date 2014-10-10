@@ -516,7 +516,7 @@ static int usbmuxd_listen_poll()
 	sfd = connect_usbmuxd_socket();
 	if (sfd < 0) {
 		while (event_cb) {
-			if ((sfd = connect_usbmuxd_socket()) > 0) {
+			if ((sfd = connect_usbmuxd_socket()) >= 0) {
 				break;
 			}
 			sleep(1);
