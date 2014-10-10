@@ -574,7 +574,14 @@ static int usbmuxd_listen_inotify()
 			    pevent->len &&
 			    pevent->name[0] != 0 &&
 			    strcmp(pevent->name, USBMUXD_SOCKET_NAME) == 0) {
-				sfd = connect_usbmuxd_socket ();
+				/* retry if usbmuxd isn't ready yet */
+				int retry = 10;
+				while (--retry >= 0) {
+					if ((sfd = connect_usbmuxd_socket ()) >= 0) {
+						break;
+					}
+					sleep(1);
+				}
 				goto end;
 			}
 			i += EVENT_SIZE + pevent->len;
