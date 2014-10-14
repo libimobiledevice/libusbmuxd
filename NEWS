@@ -2,6 +2,7 @@ Version 1.0.10
 ~~~~~~~~~~~~~~
 
 * Changes:
+  - Retry to connect to usbmuxd socket if first attempt failed (Linux/inotify)
   - Avoid exporting non-public symbols
   - Allow multiple connections to iproxy listen port
   - Add ability to target device by UDID to iproxy
