@@ -29,6 +29,9 @@ Version 1.0.9
     - usbmuxd_read_buid()
   - Made libplist dependency (and thus protocol v1 support) mandatory
   - Improved usbmuxd_get_device_list() with new ListDevices usbmuxd command
+  - Fix various memory leaks
+  - Add libusbmuxd_set_use_inotify() to control inotify support (Linux)
+  - Add libusbmuxd_set_debug_level() to enable debugging
   - Fixed WIN32 (MinGW) build
 
 This is the first release after the usbmuxd/libusbmuxd project split.
