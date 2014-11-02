@@ -41,7 +41,6 @@
 #endif
 
 #ifdef WIN32
-#include <windows.h>
 #include <winsock2.h>
 #define sleep(x) Sleep(x*1000)
 #ifndef EPROTO
@@ -82,15 +81,135 @@
 // misc utility functions
 #include "collection.h"
 
-static int libusbmuxd_debug = 0;
-#define DEBUG(x, y, ...) if (x <= libusbmuxd_debug) fprintf(stderr, (y), __VA_ARGS__); fflush(stderr);
+#ifndef DEBUG_DATA
+#ifdef _DEBUG
+# define DEBUG_DATA 2
+#else
+# define DEBUG_DATA 0
+#endif
+#endif
+
+#ifndef DEBUG_DATA_HEX
+# define DEBUG_DATA_HEX 1
+#endif
+
+static int libusbmuxd_debug = DEBUG_DATA;
+#ifndef __func__
+# define __func__ __FUNCTION__
+#endif
+#ifdef WIN32
+void OutputDebugStringV(int level, const char* format, ...) 
+{
+	if (level <= libusbmuxd_debug) 
+	{
+		char* buffer = NULL;
+		va_list args;
+		va_start(args, format);
+		int chars = _vscprintf(format, args);
+		if (chars > 0) 
+		{
+			buffer = (char*)malloc(chars + 1);
+			if (buffer != NULL)
+			{
+				memset(buffer, '\0', chars + 1);
+				_vsnprintf(buffer, chars, format, args);
+				::OutputDebugStringA(buffer);
+				fprintf(stderr, "%s", buffer); 
+				fflush(stderr);
+				free(buffer);
+			}
+		}
+		va_end(args);
+	}
+}
+#define DEBUG OutputDebugStringV
+#else
+#define DEBUG(x, y, ...) if (x <= libusbmuxd_debug) { fprintf(stderr, (y), __VA_ARGS__); fflush(stderr); }
+#endif
+
+#if DEBUG_DATA
+
+#define DEBUG_DATA_HEX_WIDTH 30
+
+static char tohex(int x)
+{
+    static char* hexchars = "0123456789ABCDEF";
+    return hexchars[x];
+}
+
+static unsigned int fromhex(char c)
+{
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    else if (c >= 'a' && c <= 'f')
+        return 10 + c - 'a';
+    else if (c >= 'A' && c <= 'F')
+        return 10 + c - 'A';
+    return 0;
+}
+
+static char *hex2strn(const char *data, const int len)
+{
+	if (len == 0) {
+		return NULL;
+	}
+	int i, j;
+	int result_len = len/2 + 1;
+
+	char *result = (char *)malloc((result_len + 1) * sizeof(char));
+
+	for (i=0, j=0; i<len; i+=2) {
+		result[j++] = fromhex(data[i]) << 4 | fromhex(data[i+1]);
+	}
+	result[j] = 0x00;
+	return result;
+}
+
+static char *str2hexn(const char *data, const int len)
+{
+	if (len == 0) {
+		return NULL;
+	}
+	int i, j;
+	int new_lines_count = len / DEBUG_DATA_HEX_WIDTH;
+	int result_len = len * 2 + new_lines_count;
+	char *result = (char *)malloc((result_len + 1) * sizeof(char));
+
+	for (i=0, j=0; i<len; i++) {
+		result[j++] = tohex((data[i]&0xf0)>>4);
+		result[j++] = tohex(data[i]&0x0f);
+		if (i > 0 && i % DEBUG_DATA_HEX_WIDTH == 0) {
+			result[j++] = 0xa;
+		}
+	}
+	result[j] = 0x00;
+	return result;
+}
+
+static char *hex2str(const char *data)
+{
+	return hex2strn(data, strlen(data));
+}
+
+static char *str2hex(const char *data)
+{
+	return str2hexn(data, strlen(data));
+}
+
+#endif
 
 static struct collection devices;
 static usbmuxd_event_cb_t event_cb = NULL;
 #ifdef WIN32
 HANDLE devmon = NULL;
+CRITICAL_SECTION mutex;
+static LONG volatile mutex_initialized = 0;
+#define LOCK if (!InterlockedExchange(&mutex_initialized, 1)) { InitializeCriticalSection(&mutex); } EnterCriticalSection(&mutex);
+#define UNLOCK LeaveCriticalSection(&mutex);
 #else
 pthread_t devmon;
+#define LOCK
+#define UNLOCK
 #endif
 static int listenfd = -1;
 
@@ -104,7 +223,7 @@ static volatile int try_list_devices = 1;
  */
 static usbmuxd_device_info_t *devices_find(uint32_t handle)
 {
-	FOREACH(usbmuxd_device_info_t *dev, &devices) {
+	FOREACH(usbmuxd_device_info_t *dev, &devices, usbmuxd_device_info_t *) {
 		if (dev && dev->handle == handle) {
 			return dev;
 		}
@@ -621,12 +740,15 @@ retry:
 	}
 
 	tag = ++use_tag;
+	LOCK;
 	if (send_listen_packet(sfd, tag) <= 0) {
+		UNLOCK;
 		DEBUG(1, "%s: ERROR: could not send listen packet\n", __func__);
 		socket_close(sfd);
 		return -1;
 	}
 	if ((usbmuxd_get_result(sfd, tag, &res, NULL) == 1) && (res != 0)) {
+		UNLOCK;
 		socket_close(sfd);
 		if ((res == RESULT_BADVERSION) && (proto_version == 1)) {
 			proto_version = 0;
@@ -635,6 +757,7 @@ retry:
 		DEBUG(1, "%s: ERROR: did not get OK but %d\n", __func__, res);
 		return -1;
 	}
+	UNLOCK;
 	return sfd;
 }
 
@@ -652,7 +775,7 @@ static int get_next_event(int sfd, usbmuxd_event_cb_t callback, void *user_data)
 		// when then usbmuxd connection fails,
 		// generate remove events for every device that
 		// is still present so applications know about it
-		FOREACH(usbmuxd_device_info_t *dev, &devices) {
+		FOREACH(usbmuxd_device_info_t *dev, &devices, usbmuxd_device_info_t *) {
 			generate_event(callback, dev, UE_DEVICE_REMOVE, user_data);
 			collection_remove(&devices, dev);
 			free(dev);
@@ -666,7 +789,7 @@ static int get_next_event(int sfd, usbmuxd_event_cb_t callback, void *user_data)
 	}
 
 	if (hdr.message == MESSAGE_DEVICE_ADD) {
-		struct usbmuxd_device_record *dev = payload;
+		struct usbmuxd_device_record *dev = (struct usbmuxd_device_record *) payload;
 		usbmuxd_device_info_t *devinfo = (usbmuxd_device_info_t*)malloc(sizeof(usbmuxd_device_info_t));
 		if (!devinfo) {
 			DEBUG(1, "%s: Out of memory!\n", __func__);
@@ -710,7 +833,7 @@ static int get_next_event(int sfd, usbmuxd_event_cb_t callback, void *user_data)
 
 static void device_monitor_cleanup(void* data)
 {
-	FOREACH(usbmuxd_device_info_t *dev, &devices) {
+	FOREACH(usbmuxd_device_info_t *dev, &devices, usbmuxd_device_info_t *) {
 		collection_remove(&devices, dev);
 		free(dev);
 	} ENDFOREACH
@@ -846,6 +969,7 @@ retry:
 	}
 
 	tag = ++use_tag;
+	LOCK;
 	if ((proto_version == 1) && (try_list_devices)) {
 		if (send_list_devices_packet(sfd, tag) > 0) {
 			plist_t list = NULL;
@@ -862,6 +986,7 @@ retry:
 						usbmuxd_device_info_t *devinfo = device_info_from_device_record(dev);
 						free(dev);
 						if (!devinfo) {
+							UNLOCK;
 							socket_close(sfd);
 							DEBUG(1, "%s: can't create device info object\n", __func__);
 							plist_free(list);
@@ -876,6 +1001,7 @@ retry:
 				if (res == RESULT_BADVERSION) {
 					proto_version = 0;
 				}
+				UNLOCK;
 				socket_close(sfd);
 				try_list_devices = 0;
 				plist_free(list);
@@ -892,6 +1018,7 @@ retry:
 		if ((usbmuxd_get_result(sfd, tag, &res, NULL) == 1) && (res == 0)) {
 			listen_success = 1;
 		} else {
+			UNLOCK;
 			socket_close(sfd);
 			if ((res == RESULT_BADVERSION) && (proto_version == 1)) {
 				proto_version = 0;
@@ -903,6 +1030,7 @@ retry:
 	}
 
 	if (!listen_success) {
+		UNLOCK;
 		socket_close(sfd);
 		DEBUG(1, "%s: Could not send listen request!\n", __func__);
 		return -1;
@@ -914,10 +1042,11 @@ retry:
 	while (1) {
 		if (receive_packet(sfd, &hdr, &payload, 100) > 0) {
 			if (hdr.message == MESSAGE_DEVICE_ADD) {
-				dev = payload;
+				dev = (usbmuxd_device_record *)payload;
 
 				usbmuxd_device_info_t *devinfo = device_info_from_device_record(dev);
 				if (!devinfo) {
+					UNLOCK;
 					socket_close(sfd);
 					DEBUG(1, "%s: can't create device info object\n", __func__);
 					free(payload);
@@ -931,7 +1060,7 @@ retry:
 
 				memcpy(&handle, payload, sizeof(uint32_t));
 
-				FOREACH(usbmuxd_device_info_t *di, &tmpdevs) {
+				FOREACH(usbmuxd_device_info_t *di, &tmpdevs, usbmuxd_device_info_t *) {
 					if (di && di->handle == handle) {
 						devinfo = di;
 						break;
@@ -956,13 +1085,16 @@ retry:
 got_device_list:
 
 	// explicitly close connection
+	UNLOCK;
 	socket_close(sfd);
 
 	// create copy of device info entries from collection
 	newlist = (usbmuxd_device_info_t*)malloc(sizeof(usbmuxd_device_info_t) * (collection_count(&tmpdevs) + 1));
 	dev_cnt = 0;
-	FOREACH(usbmuxd_device_info_t *di, &tmpdevs) {
-		if (di) {
+	FOREACH(usbmuxd_device_info_t *di, &tmpdevs, usbmuxd_device_info_t *) {
+		/* Polyfun 02/11/2014 With only 1 idevice connected, 2 may be reported; 
+		only interested in the one with a valid product_id (!= 0), unless it is the only idevice. */
+		if (di && (di->product_id != 0 || tmpdevs.capacity == 1)) {
 			memcpy(&newlist[dev_cnt], di, sizeof(usbmuxd_device_info_t));
 			free(di);
 			dev_cnt++;

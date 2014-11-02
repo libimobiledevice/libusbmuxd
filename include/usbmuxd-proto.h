@@ -57,28 +57,47 @@ enum usbmuxd_msgtype {
 	MESSAGE_PLIST = 8,
 };
 
+#ifdef _MSC_VER
+#pragma pack(push(1))
+#endif
 struct usbmuxd_header {
 	uint32_t length;    // length of message, including header
 	uint32_t version;   // protocol version
 	uint32_t message;   // message type
 	uint32_t tag;       // responses to this query will echo back this tag
+#ifdef _MSC_VER
+};
+#else
 } __attribute__((__packed__));
+#endif
 
 struct usbmuxd_result_msg {
 	struct usbmuxd_header header;
 	uint32_t result;
+#ifdef _MSC_VER
+};
+#else
 } __attribute__((__packed__));
+#endif
 
 struct usbmuxd_connect_request {
 	struct usbmuxd_header header;
 	uint32_t device_id;
 	uint16_t port;   // TCP port number
 	uint16_t reserved;   // set to zero
+#ifdef _MSC_VER
+};
+#else
 } __attribute__((__packed__));
+#endif
 
 struct usbmuxd_listen_request {
 	struct usbmuxd_header header;
+#ifdef _MSC_VER
+};
+#else
 } __attribute__((__packed__));
+#endif
 
 struct usbmuxd_device_record {
 	uint32_t device_id;
@@ -86,7 +105,15 @@ struct usbmuxd_device_record {
 	char serial_number[256];
 	uint16_t padding;
 	uint32_t location;
+#ifdef _MSC_VER
+};
+#else
 } __attribute__((__packed__));
+#endif
+
+#ifdef _MSC_VER
+#pragma pack(pop())
+#endif
 
 #ifdef __cplusplus
 }

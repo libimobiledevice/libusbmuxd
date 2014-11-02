@@ -31,7 +31,6 @@
 #include <unistd.h>
 #include <errno.h>
 #ifdef WIN32
-#include <windows.h>
 #include <winsock2.h>
 typedef unsigned int socklen_t;
 #else

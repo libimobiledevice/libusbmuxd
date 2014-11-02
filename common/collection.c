@@ -30,7 +30,7 @@
 
 void collection_init(struct collection *col)
 {
-	col->list = malloc(sizeof(void *));
+	col->list = (void**)malloc(sizeof(void *));
 	memset(col->list, 0, sizeof(void *));
 	col->capacity = 1;
 }
@@ -51,7 +51,7 @@ void collection_add(struct collection *col, void *element)
 			return;
 		}
 	}
-	col->list = realloc(col->list, sizeof(void*) * col->capacity * 2);
+	col->list = (void**)realloc(col->list, sizeof(void*) * col->capacity * 2);
 	memset(&col->list[col->capacity], 0, sizeof(void *) * col->capacity);
 	col->list[col->capacity] = element;
 	col->capacity *= 2;
