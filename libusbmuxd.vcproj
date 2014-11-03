@@ -90,6 +90,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				CommandLine="xcopy &quot;$(TargetPath)&quot; &quot;C:\Program Files (x86)\Calibre\DLLs&quot; /Y /R"
 			/>
 		</Configuration>
 		<Configuration
@@ -164,7 +165,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="copy &quot;$(TargetPath)&quot; &quot;C:\Program Files\Calibre\DLLs&quot; /Y"
+				CommandLine="xcopy &quot;$(TargetPath)&quot; &quot;C:\Program Files\Calibre\DLLs&quot; /Y /R"
 			/>
 		</Configuration>
 		<Configuration
