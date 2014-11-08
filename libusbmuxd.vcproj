@@ -45,7 +45,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="&quot;$(ProjectDir)common&quot;;&quot;$(ProjectDir)include&quot;;&quot;$(SolutionDir)..\libplist\include&quot;;&quot;$(SolutionDir)vendors\include&quot;"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBUSBMUXD_EXPORTS;HAVE_PLIST;HAVE_CONFIG_H;POLYFUN"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBUSBMUXD_EXPORTS;HAVE_PLIST;POLYFUN"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -120,7 +120,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="&quot;$(ProjectDir)common&quot;;&quot;$(ProjectDir)include&quot;;&quot;$(SolutionDir)..\libplist\include&quot;;&quot;$(SolutionDir)vendors\include&quot;"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBUSBMUXD_EXPORTS;HAVE_PLIST;HAVE_CONFIG_H;POLYFUN"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBUSBMUXD_EXPORTS;HAVE_PLIST;POLYFUN"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -196,7 +196,7 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="&quot;$(ProjectDir)common&quot;;&quot;$(ProjectDir)include&quot;;&quot;$(SolutionDir)..\libplist\include&quot;;&quot;$(SolutionDir)vendors\include&quot;"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBUSBMUXD_EXPORTS;HAVE_PLIST;HAVE_CONFIG_H;POLYFUN"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBUSBMUXD_EXPORTS;HAVE_PLIST;POLYFUN"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
@@ -273,7 +273,7 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="&quot;$(ProjectDir)common&quot;;&quot;$(ProjectDir)include&quot;;&quot;$(SolutionDir)..\libplist\include&quot;;&quot;$(SolutionDir)vendors\include&quot;"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBUSBMUXD_EXPORTS;HAVE_PLIST;HAVE_CONFIG_H;POLYFUN"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBUSBMUXD_EXPORTS;HAVE_PLIST;POLYFUN"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
@@ -485,7 +485,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\include\config.h"
+				RelativePath=".\common\msc.h"
 				>
 			</File>
 			<File

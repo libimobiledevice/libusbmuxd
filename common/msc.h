@@ -1,5 +1,5 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef MSC_H
+#define MSC_H
 
 #ifdef _MSC_VER
 #define __func__ __FUNCTION__
@@ -7,4 +7,4 @@
 #define strcasecmp _stricmp
 #endif
 
-#endif /* CONFIG_H */
+#endif

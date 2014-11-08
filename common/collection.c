@@ -27,6 +27,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "collection.h"
+#include <msc.h>
 
 void collection_init(struct collection *col)
 {

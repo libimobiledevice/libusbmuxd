@@ -42,6 +42,7 @@ typedef unsigned int socklen_t;
 #endif
 #include "socket.h"
 #include "usbmuxd.h"
+#include <msc.h>
 
 static uint16_t listen_port = 0;
 static uint16_t device_port = 0;
