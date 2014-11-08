@@ -15,7 +15,6 @@ swig/*
 *.swp
 *.patch
 aclocal.m4
-config.h
 config.log
 config.sub
 config.guess
