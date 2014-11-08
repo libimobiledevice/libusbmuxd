@@ -25,6 +25,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -102,6 +103,13 @@ void OutputDebugStringV(int level, const char* format, ...)
 {
 	if (level <= libusbmuxd_debug) 
 	{
+		time_t now;
+		time(&now);
+		char nowText[0xFF] = "";
+		strftime(nowText, sizeof(nowText) - 1, "%H:%M:%S", localtime(&now));
+		char prefixText[0xFF] = "";
+		_snprintf(prefixText, sizeof(prefixText) - 1, "%s [0x%0x] ", nowText, ::GetCurrentThreadId());
+
 		char* buffer = NULL;
 		va_list args;
 		va_start(args, format);
@@ -113,8 +121,8 @@ void OutputDebugStringV(int level, const char* format, ...)
 			{
 				memset(buffer, '\0', chars + 1);
 				_vsnprintf(buffer, chars, format, args);
-				::OutputDebugStringA(buffer);
-				fprintf(stderr, "%s", buffer); 
+				::OutputDebugStringA(prefixText); ::OutputDebugStringA(buffer);
+				fprintf(stderr, "%s%s", prefixText, buffer); 
 				fflush(stderr);
 				free(buffer);
 			}
@@ -126,6 +134,58 @@ void OutputDebugStringV(int level, const char* format, ...)
 #else
 #define DEBUG(x, y, ...) if (x <= libusbmuxd_debug) { fprintf(stderr, (y), __VA_ARGS__); fflush(stderr); }
 #endif
+
+class LogInOut
+{
+private:
+	char* _buffer;
+	int _level;
+
+	int vasprintf(char** buffer, const char* format, va_list args)
+	{
+		int res = 0;
+#ifdef _MSC_VER
+		res = _vscprintf(format, args);
+#else
+		char buf[16] = "";
+		res = vsnprintf(buf, 16, format, args);
+#endif
+		if (res > 0) 
+		{
+			*buffer = (char*)malloc(res + 1);
+			res = vsnprintf(*buffer, res + 1, format, args);
+		}
+
+		return res;
+	}
+
+public:
+	LogInOut(int level, const char* format, ...)
+	{
+		_level = level;
+		_buffer = NULL;
+		if (_level <= libusbmuxd_debug)
+		{
+			char* newFormat = (char*)malloc(strlen(format) + 2);
+			strcpy(newFormat, "->");
+			strcat(newFormat, format);
+			va_list args;
+			va_start(args, format);
+			vasprintf(&_buffer, newFormat, args);
+			va_end(args);
+			DEBUG(_level, _buffer);
+		}
+	}
+	~LogInOut()
+	{
+		if (_buffer != NULL)
+		{
+			memcpy(_buffer, "<-", 2);
+			DEBUG(_level, _buffer);
+			free(_buffer);
+		}
+	}
+};
 
 #if DEBUG_DATA
 
@@ -880,6 +940,7 @@ static void *device_monitor(void *data)
 
 USBMUXD_API int usbmuxd_subscribe(usbmuxd_event_cb_t callback, void *user_data)
 {
+	LogInOut logInOut(1, "%s()\n", __func__);
 	int res;
 
 	if (!callback) {
@@ -905,6 +966,7 @@ USBMUXD_API int usbmuxd_subscribe(usbmuxd_event_cb_t callback, void *user_data)
 
 USBMUXD_API int usbmuxd_unsubscribe()
 {
+	LogInOut logInOut(1, "%s()\n", __func__);
 	event_cb = NULL;
 
 	socket_shutdown(listenfd, SHUT_RDWR);
@@ -948,6 +1010,8 @@ static usbmuxd_device_info_t *device_info_from_device_record(struct usbmuxd_devi
 
 USBMUXD_API int usbmuxd_get_device_list(usbmuxd_device_info_t **device_list)
 {
+	LogInOut logInOut(1, "%s\n", __func__);
+
 	int sfd;
 	int tag;
 	int listen_success = 0;
@@ -1110,6 +1174,7 @@ got_device_list:
 
 USBMUXD_API int usbmuxd_device_list_free(usbmuxd_device_info_t **device_list)
 {
+	LogInOut logInOut(1, "%s()\n", __func__);
 	if (device_list) {
 		free(*device_list);
 	}
@@ -1118,6 +1183,7 @@ USBMUXD_API int usbmuxd_device_list_free(usbmuxd_device_info_t **device_list)
 
 USBMUXD_API int usbmuxd_get_device_by_udid(const char *udid, usbmuxd_device_info_t *device)
 {
+	LogInOut logInOut(1, "%s(%s)\n", __func__, udid);
 	usbmuxd_device_info_t *dev_list = NULL;
 
 	if (!device) {
@@ -1153,6 +1219,7 @@ USBMUXD_API int usbmuxd_get_device_by_udid(const char *udid, usbmuxd_device_info
 
 USBMUXD_API int usbmuxd_connect(const int handle, const unsigned short port)
 {
+	LogInOut logInOut(1, "%s(%d, %d)\n", __func__, handle, port);
 	int sfd;
 	int tag;
 	int connected = 0;
@@ -1198,11 +1265,13 @@ retry:
 
 USBMUXD_API int usbmuxd_disconnect(int sfd)
 {
+	LogInOut logInOut(1, "%s(%d)\n", __func__, sfd);
 	return socket_close(sfd);
 }
 
 USBMUXD_API int usbmuxd_send(int sfd, const char *data, uint32_t len, uint32_t *sent_bytes)
 {
+	LogInOut logInOut(1, "%s(%d)\n", __func__, sfd);
 	int num_sent;
 
 	if (sfd < 0) {
@@ -1226,6 +1295,7 @@ USBMUXD_API int usbmuxd_send(int sfd, const char *data, uint32_t len, uint32_t *
 
 USBMUXD_API int usbmuxd_recv_timeout(int sfd, char *data, uint32_t len, uint32_t *recv_bytes, unsigned int timeout)
 {
+	LogInOut logInOut(1, "%s(%d, %d)\n", __func__, sfd, len);
 	int num_recv = socket_receive_timeout(sfd, (void*)data, len, 0, timeout);
 	if (num_recv < 0) {
 		*recv_bytes = 0;
@@ -1244,6 +1314,7 @@ USBMUXD_API int usbmuxd_recv(int sfd, char *data, uint32_t len, uint32_t *recv_b
 
 USBMUXD_API int usbmuxd_read_buid(char **buid)
 {
+	LogInOut logInOut(1, "%s()\n", __func__);
 	int sfd;
 	int tag;
 	int ret = -1;
@@ -1285,6 +1356,7 @@ USBMUXD_API int usbmuxd_read_buid(char **buid)
 
 USBMUXD_API int usbmuxd_read_pair_record(const char* record_id, char **record_data, uint32_t *record_size)
 {
+	LogInOut logInOut(1, "%s(%s)\n", __func__, record_id);
 	int sfd;
 	int tag;
 	int ret = -1;
@@ -1333,6 +1405,7 @@ USBMUXD_API int usbmuxd_read_pair_record(const char* record_id, char **record_da
 
 USBMUXD_API int usbmuxd_save_pair_record(const char* record_id, const char *record_data, uint32_t record_size)
 {
+	LogInOut logInOut(1, "%s(%s)\n", __func__, record_id);
 	int sfd;
 	int tag;
 	int ret = -1;
@@ -1372,6 +1445,7 @@ USBMUXD_API int usbmuxd_save_pair_record(const char* record_id, const char *reco
 
 USBMUXD_API int usbmuxd_delete_pair_record(const char* record_id)
 {
+	LogInOut logInOut(1, "%s(%s)\n", __func__, record_id);
 	int sfd;
 	int tag;
 	int ret = -1;
