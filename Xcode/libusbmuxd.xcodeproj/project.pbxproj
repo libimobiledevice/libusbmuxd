@@ -13,7 +13,7 @@
 		C847BE8C1A751F8B00271179 /* socket.h in Headers */ = {isa = PBXBuildFile; fileRef = C847BE851A751F8B00271179 /* socket.h */; };
 		C847BE8D1A751F8B00271179 /* libusbmuxd.c in Sources */ = {isa = PBXBuildFile; fileRef = C847BE871A751F8B00271179 /* libusbmuxd.c */; };
 		C847BE8F1A751F9300271179 /* config.h in Headers */ = {isa = PBXBuildFile; fileRef = C847BE8E1A751F9300271179 /* config.h */; };
-		C8EDA29F1A77D953009842F7 /* libplist.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C847BE951A751FA300271179 /* libplist.a */; };
+		C8EDA29F1A77D953009842F7 /* libplist.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = C847BE951A751FA300271179 /* libplist.dylib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -27,7 +27,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		C847BE791A751F2A00271179 /* libusbmuxd.a */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libusbmuxd.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		C847BE791A751F2A00271179 /* libusbmuxd.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; name = libusbmuxd.dylib; path = libusbmuxd.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		C847BE811A751F8B00271179 /* collection.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = collection.c; sourceTree = "<group>"; };
 		C847BE821A751F8B00271179 /* collection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = collection.h; sourceTree = "<group>"; };
 		C847BE831A751F8B00271179 /* Makefile.am */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Makefile.am; sourceTree = "<group>"; };
@@ -44,7 +44,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C8EDA29F1A77D953009842F7 /* libplist.a in Frameworks */,
+				C8EDA29F1A77D953009842F7 /* libplist.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,7 +65,7 @@
 		C847BE7A1A751F2A00271179 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				C847BE791A751F2A00271179 /* libusbmuxd.a */,
+				C847BE791A751F2A00271179 /* libusbmuxd.dylib */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -96,7 +96,7 @@
 		C847BE911A751FA300271179 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				C847BE951A751FA300271179 /* libplist.a */,
+				C847BE951A751FA300271179 /* libplist.dylib */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -131,7 +131,7 @@
 			);
 			name = libusbmuxd;
 			productName = libusbmuxd;
-			productReference = C847BE791A751F2A00271179 /* libusbmuxd.a */;
+			productReference = C847BE791A751F2A00271179 /* libusbmuxd.dylib */;
 			productType = "com.apple.product-type.library.dynamic";
 		};
 /* End PBXNativeTarget section */
@@ -172,9 +172,10 @@
 /* End PBXProject section */
 
 /* Begin PBXReferenceProxy section */
-		C847BE951A751FA300271179 /* libplist.a */ = {
+		C847BE951A751FA300271179 /* libplist.dylib */ = {
 			isa = PBXReferenceProxy;
 			fileType = "compiled.mach-o.dylib";
+			name = libplist.dylib;
 			path = libplist.a;
 			remoteRef = C847BE941A751FA300271179 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
