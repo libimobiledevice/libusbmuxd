@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>1E2E28E7-1C75-4EE9-A8E6-E59F4FA8874E</string>
+	<key>IDESourceControlProjectName</key>
+	<string>libusbmuxd</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>97DEBE5E75882055095471C30476BE04A8F57925</key>
+		<string>https://github.com/lunzii/libusbmuxd.git</string>
+		<key>F12AAB142D225A23A20B5B62D5F1B3376BB3038D</key>
+		<string>https://github.com/lunzii/libplist.git</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>Xcode/libusbmuxd.xcodeproj</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>97DEBE5E75882055095471C30476BE04A8F57925</key>
+		<string>../../..</string>
+		<key>F12AAB142D225A23A20B5B62D5F1B3376BB3038D</key>
+		<string>../../../../libplist</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>https://github.com/lunzii/libusbmuxd.git</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>111</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>97DEBE5E75882055095471C30476BE04A8F57925</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>F12AAB142D225A23A20B5B62D5F1B3376BB3038D</string>
+			<key>IDESourceControlWCCName</key>
+			<string>libplist</string>
+		</dict>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>97DEBE5E75882055095471C30476BE04A8F57925</string>
+			<key>IDESourceControlWCCName</key>
+			<string>libusbmuxd</string>
+		</dict>
+	</array>
+</dict>
+</plist>
