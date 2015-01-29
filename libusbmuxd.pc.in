@@ -3,9 +3,9 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: libusbmuxd
+Name: @PACKAGE_NAME@
 Description: A library to communicate with the usbmux daemon
-Version: @VERSION@
+Version: @PACKAGE_VERSION@
 Libs: -L${libdir} -lusbmuxd
 Cflags: -I${includedir}
-
+Requires.private: libplist >= @LIBPLIST_VERSION@

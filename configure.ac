@@ -17,7 +17,12 @@ dnl libtool versioning
 # CURRENT : REVISION : AGE
 LIBUSBMUXD_SO_VERSION=4:0:0
 
+
+dnl Minimum package versions
+LIBPLIST_VERSION=1.11
+
 AC_SUBST(LIBUSBMUXD_SO_VERSION)
+AC_SUBST(LIBPLIST_VERSION)
 
 # Checks for programs.
 AC_PROG_CC
@@ -26,7 +31,7 @@ AM_PROG_CC_C_O
 AC_PROG_LIBTOOL
 
 # Checks for libraries.
-PKG_CHECK_MODULES(libplist, libplist >= 1.11)
+PKG_CHECK_MODULES(libplist, libplist >= $LIBPLIST_VERSION)
 AC_CHECK_HEADERS([sys/inotify.h], have_inotify=yes, have_inotify=no)
 
 AC_ARG_WITH([inotify],
