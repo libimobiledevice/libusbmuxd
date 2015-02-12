@@ -54,11 +54,11 @@
 		C847BE701A751F2A00271179 = {
 			isa = PBXGroup;
 			children = (
-				C847BE901A751FA300271179 /* libplist.xcodeproj */,
 				C847BE8E1A751F9300271179 /* config.h */,
+				C847BE901A751FA300271179 /* libplist.xcodeproj */,
 				C847BE801A751F8B00271179 /* common */,
-				C847BE861A751F8B00271179 /* src */,
 				C847BE7A1A751F2A00271179 /* Products */,
+				C847BE861A751F8B00271179 /* src */,
 			);
 			sourceTree = "<group>";
 		};
@@ -228,10 +228,11 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				INSTALL_PATH = "";
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = macosx;
+				SDKROOT = macosx10.9;
 			};
 			name = Debug;
 		};
@@ -263,9 +264,10 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				INSTALL_PATH = "";
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MTL_ENABLE_DEBUG_INFO = NO;
-				SDKROOT = macosx;
+				SDKROOT = macosx10.9;
 			};
 			name = Release;
 		};
@@ -281,9 +283,10 @@
 					../../libplist/include/,
 					../include/,
 				);
-				INSTALL_PATH = "@executable_path/../Frameworks";
+				INSTALL_PATH = "@executable_path";
 				MACH_O_TYPE = staticlib;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx10.9;
 			};
 			name = Debug;
 		};
@@ -299,9 +302,10 @@
 					../../libplist/include/,
 					../include/,
 				);
-				INSTALL_PATH = "@executable_path/../Frameworks";
+				INSTALL_PATH = "@executable_path";
 				MACH_O_TYPE = staticlib;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx10.9;
 			};
 			name = Release;
 		};
