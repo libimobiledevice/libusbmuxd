@@ -1158,9 +1158,8 @@ got_device_list:
 	newlist = (usbmuxd_device_info_t*)malloc(sizeof(usbmuxd_device_info_t) * (collection_count(&tmpdevs) + 1));
 	dev_cnt = 0;
 	FOREACH(usbmuxd_device_info_t *di, &tmpdevs, usbmuxd_device_info_t *) {
-		/* Polyfun 02/11/2014 With only 1 idevice connected, 2 may be reported; 
-		only interested in the one with a valid product_id (!= 0), unless it is the only idevice. */
-		if (di && (di->product_id != 0 || tmpdevs.capacity == 1)) {
+		/* Polyfun 23/11/2014 Devices connected by WIFI or USB may be reported. Ignore any without a valid product_id. */
+		if (di && di->product_id != 0) {
 			memcpy(&newlist[dev_cnt], di, sizeof(usbmuxd_device_info_t));
 			free(di);
 			dev_cnt++;
