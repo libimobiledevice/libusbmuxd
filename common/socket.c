@@ -19,13 +19,23 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#ifdef _MSC_VER
+#define __func__ __FUNCTION__
+#endif
+
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+//#include <unistd.h>
 #include <errno.h>
+#ifdef _MSC_VER
+#pragma warning(disable:4996)
+#pragma warning(disable:4244)
+#include <winsock2.h>
+#else
 #include <sys/time.h>
+#endif
 #include <sys/stat.h>
 #ifdef WIN32
 #include <winsock2.h>
