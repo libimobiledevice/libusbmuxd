@@ -677,10 +677,11 @@ static int get_next_event(int sfd, usbmuxd_event_cb_t callback, void *user_data)
 		memset(devinfo->udid, '\0', sizeof(devinfo->udid));
 		memcpy(devinfo->udid, dev->serial_number, sizeof(devinfo->udid));
 
-		if (strcasecmp(devinfo->udid, "ffffffffffffffffffffffffffffffffffffffff") == 0) {
 #ifndef _MSC_VER
+		if (strcasecmp(devinfo->udid, "ffffffffffffffffffffffffffffffffffffffff") == 0) {
 			sprintf(devinfo->udid + 32, "%08x", devinfo->handle);
 #else
+		if (_stricmp(devinfo->udid, "ffffffffffffffffffffffffffffffffffffffff") == 0) {
             sprintf_s(devinfo->udid + 32, 41, "%08x", devinfo->handle);
 #endif
 		}
@@ -818,10 +819,11 @@ static usbmuxd_device_info_t *device_info_from_device_record(struct usbmuxd_devi
 	memset(devinfo->udid, '\0', sizeof(devinfo->udid));
 	memcpy(devinfo->udid, dev->serial_number, sizeof(devinfo->udid));
 
-    if (strcasecmp(devinfo->udid, "ffffffffffffffffffffffffffffffffffffffff") == 0) {
 #ifndef _MSC_VER
+    if (strcasecmp(devinfo->udid, "ffffffffffffffffffffffffffffffffffffffff") == 0) {
 		sprintf(devinfo->udid + 32, "%08x", devinfo->handle);
 #else
+	if (_stricmp(devinfo->udid, "ffffffffffffffffffffffffffffffffffffffff") == 0) {
         sprintf_s(devinfo->udid + 32, 41, "%08x", devinfo->handle);
 #endif
 	}
