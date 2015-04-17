@@ -23,6 +23,10 @@
 #include <config.h>
 #endif
 
+#ifdef _MSC_VER
+#define __func__ __FUNCTION__
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
