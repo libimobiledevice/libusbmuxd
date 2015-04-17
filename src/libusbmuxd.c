@@ -30,6 +30,10 @@
 #include <config.h>
 #endif
 
+#ifdef _MSC_VER
+#define __func__ __FUNCTION__
+#endif
+
 #ifdef WIN32
   #define USBMUXD_API __declspec( dllexport )
 #else
@@ -41,8 +45,8 @@
 #endif
 
 #ifdef WIN32
-#include <windows.h>
 #include <winsock2.h>
+#include <windows.h>
 #define sleep(x) Sleep(x*1000)
 #ifndef EPROTO
 #define EPROTO 134
@@ -64,7 +68,7 @@
 #define USBMUXD_SOCKET_NAME "usbmuxd"
 #endif /* HAVE_INOTIFY */
 
-#include <unistd.h>
+//#include <unistd.h>
 #include <signal.h>
 
 #include <plist/plist.h>
