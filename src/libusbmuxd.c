@@ -20,12 +20,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <stdio.h>
-#include <string.h>
-
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -33,6 +27,12 @@
 #ifdef _MSC_VER 
 #include "msc_config.h"
 #endif
+
+#include <stdint.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
 
 #ifdef WIN32
   #define USBMUXD_API __declspec( dllexport )
