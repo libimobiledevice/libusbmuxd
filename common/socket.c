@@ -34,6 +34,7 @@
 #include <windows.h>
 static int wsa_init = 0;
 #else
+#include <unistd.h>
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <sys/un.h>
