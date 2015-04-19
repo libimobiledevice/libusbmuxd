@@ -30,6 +30,10 @@
 #include <config.h>
 #endif
 
+#ifdef _MSC_VER 
+#include "msc_config.h"
+#endif
+
 #ifdef WIN32
   #define USBMUXD_API __declspec( dllexport )
 #else
