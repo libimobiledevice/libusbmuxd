@@ -27,15 +27,14 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <errno.h>
-#include <sys/time.h>
 #include <sys/stat.h>
 #ifdef WIN32
 #include <winsock2.h>
 #include <windows.h>
 static int wsa_init = 0;
 #else
+#include <sys/time.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <netinet/in.h>
