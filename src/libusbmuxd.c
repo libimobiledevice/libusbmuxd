@@ -41,8 +41,8 @@
 #endif
 
 #ifdef WIN32
-#include <windows.h>
 #include <winsock2.h>
+#include <windows.h>
 #define sleep(x) Sleep(x*1000)
 #ifndef EPROTO
 #define EPROTO 134
@@ -268,8 +268,24 @@ static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload
 					hdr.length = sizeof(hdr) + sizeof(dwval);
 					hdr.message = MESSAGE_DEVICE_REMOVE;
 				}
+			} else if (strcmp(message, "Paired") == 0) {
+				/* device pair message */
+				uint32_t dwval = 0;
+				plist_t n = plist_dict_get_item(plist, "DeviceID");
+				if (n) {
+					plist_get_uint_val(n, &val);
+					*payload = malloc(sizeof(uint32_t));
+					dwval = val;
+					memcpy(*payload, &dwval, sizeof(dwval));
+					hdr.length = sizeof(hdr) + sizeof(dwval);
+					hdr.message = MESSAGE_DEVICE_PAIRED;
+				}
 			} else {
-				DEBUG(1, "%s: Unexpected message '%s' in plist!\n", __func__, message);
+				char *xml = NULL;
+				uint32_t len = 0;
+				plist_to_xml(plist, &xml, &len);
+				DEBUG(1, "%s: Unexpected message '%s' in plist:\n%s\n", __func__, message, xml);
+				free(xml);
 				free(message);
 				plist_free(plist);
 				return -EBADMSG;
