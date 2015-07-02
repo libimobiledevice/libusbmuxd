@@ -782,6 +782,7 @@ USBMUXD_API int usbmuxd_subscribe(usbmuxd_event_cb_t callback, void *user_data)
 
 USBMUXD_API int usbmuxd_unsubscribe()
 {
+	int res;
 	event_cb = NULL;
 
 	socket_shutdown(listenfd, SHUT_RDWR);
@@ -791,9 +792,13 @@ USBMUXD_API int usbmuxd_unsubscribe()
 		WaitForSingleObject(devmon, INFINITE);
 	}
 #else
-	if (pthread_kill(devmon, 0) == 0) {
+	res = pthread_kill(devmon, 0);
+	if (res == 0) {
 		pthread_cancel(devmon);
-		pthread_join(devmon, NULL);
+		res = pthread_join(devmon, NULL);
+	}
+	if ((res != 0) && (res != ESRCH)) {
+		return res;
 	}
 #endif
 
