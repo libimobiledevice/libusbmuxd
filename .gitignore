@@ -15,7 +15,6 @@ swig/*
 *.swp
 *.patch
 aclocal.m4
-config.h
 config.log
 config.sub
 config.guess
@@ -37,3 +36,7 @@ docs/html
 libusbmuxd.pc
 tools/.libs/*
 tools/iproxy
+Debug/
+Release/
+*.vcproj.*
+*.aps
