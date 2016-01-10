@@ -30,7 +30,7 @@
 #include <config.h>
 #endif
 
-#ifdef WIN32
+#ifdef _MSC_VER
   #define USBMUXD_API __declspec( dllexport )
 #else
   #ifdef HAVE_FVISIBILITY
@@ -40,8 +40,8 @@
   #endif
 #endif
 
-#ifdef WIN32
-#include <windows.h>
+#ifdef _MSC_VER
+#define strcasecmp _stricmp
 #include <winsock2.h>
 #define sleep(x) Sleep(x*1000)
 #ifndef EPROTO
@@ -64,7 +64,9 @@
 #define USBMUXD_SOCKET_NAME "usbmuxd"
 #endif /* HAVE_INOTIFY */
 
+#ifndef _MSC_VER
 #include <unistd.h>
+#endif
 #include <signal.h>
 
 #include <plist/plist.h>
@@ -962,7 +964,11 @@ got_device_list:
 	newlist = (usbmuxd_device_info_t*)malloc(sizeof(usbmuxd_device_info_t) * (collection_count(&tmpdevs) + 1));
 	dev_cnt = 0;
 	FOREACH(usbmuxd_device_info_t *di, &tmpdevs) {
+#ifdef NO_WIFI_DEVICES
+        if(di && di->product_id != 0) {
+#else
 		if (di) {
+#endif
 			memcpy(&newlist[dev_cnt], di, sizeof(usbmuxd_device_info_t));
 			free(di);
 			dev_cnt++;
