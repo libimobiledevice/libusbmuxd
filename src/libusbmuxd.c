@@ -180,8 +180,10 @@ static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload
 
 	recv_len = socket_receive_timeout(sfd, &hdr, sizeof(hdr), 0, timeout);
 	if (recv_len < 0) {
+		DEBUG(1, "%s: Error receiving packet: %d\n", __func__, recv_len);
 		return recv_len;
 	} else if ((size_t)recv_len < sizeof(hdr)) {
+		DEBUG(1, "%s: Received packet is too small, got %d bytes!\n", __func__, recv_len);
 		return recv_len;
 	}
 
@@ -319,17 +321,10 @@ static int usbmuxd_get_result(int sfd, uint32_t tag, uint32_t *result, void **re
 		*result_plist = NULL;
 	}
 
-	if ((recv_len = receive_packet(sfd, &hdr, (void**)&res, 5000)) < 0) {
-		DEBUG(1, "%s: Error receiving packet: %d\n", __func__, recv_len);
-		if (res)
-			free(res);
-		return recv_len;
-	}
-	if ((size_t)recv_len < sizeof(hdr)) {
-		DEBUG(1, "%s: Received packet is too small!\n", __func__);
-		if (res)
-			free(res);
-		return -EPROTO;
+	recv_len = receive_packet(sfd, &hdr, (void**)&res, 5000);
+	if (recv_len < 0 || (size_t)recv_len < sizeof(hdr)) {
+		free(res);
+		return (recv_len < 0 ? recv_len : -EPROTO);
 	}
 
 	if (hdr.message == MESSAGE_RESULT) {
@@ -665,6 +660,7 @@ static int get_next_event(int sfd, usbmuxd_event_cb_t callback, void *user_data)
 
 	/* block until we receive something */
 	if (receive_packet(sfd, &hdr, &payload, 0) < 0) {
+		DEBUG(1, "%s: Error in usbmuxd connection, disconnecting all devices!\n", __func__);
 		// when then usbmuxd connection fails,
 		// generate remove events for every device that
 		// is still present so applications know about it
