@@ -50,7 +50,9 @@
 #ifdef WIN32
 #include <winsock2.h>
 #include <windows.h>
+#ifndef HAVE_SLEEP
 #define sleep(x) Sleep(x*1000)
+#endif
 #else
 #include <sys/socket.h>
 #include <arpa/inet.h>
