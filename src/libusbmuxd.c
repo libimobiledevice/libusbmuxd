@@ -40,16 +40,17 @@
   #endif
 #endif
 
-#ifdef WIN32
-#include <winsock2.h>
-#include <windows.h>
-#define sleep(x) Sleep(x*1000)
 #ifndef EPROTO
 #define EPROTO 134
 #endif
 #ifndef EBADMSG
 #define EBADMSG 104
 #endif
+
+#ifdef WIN32
+#include <winsock2.h>
+#include <windows.h>
+#define sleep(x) Sleep(x*1000)
 #else
 #include <sys/socket.h>
 #include <arpa/inet.h>
