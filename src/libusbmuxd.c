@@ -813,7 +813,10 @@ USBMUXD_API int usbmuxd_unsubscribe()
 
 #ifdef WIN32
 	if (devmon != NULL) {
-		WaitForSingleObject(devmon, INFINITE);
+		res = WaitForSingleObject(devmon, INFINITE);
+		if (res != 0) {
+			return res;
+		}
 	}
 #else
 	res = pthread_kill(devmon, 0);
