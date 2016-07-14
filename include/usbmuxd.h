@@ -45,7 +45,8 @@ typedef struct {
  */
 enum usbmuxd_event_type {
     UE_DEVICE_ADD = 1,
-    UE_DEVICE_REMOVE
+    UE_DEVICE_REMOVE,
+    UE_DEVICE_PAIRED
 };
 
 /**

@@ -711,6 +711,18 @@ static int get_next_event(int sfd, usbmuxd_event_cb_t callback, void *user_data)
 			collection_remove(&devices, devinfo);
 			free(devinfo);
 		}
+	} else if (hdr.message == MESSAGE_DEVICE_PAIRED) {
+		uint32_t handle;
+		usbmuxd_device_info_t *devinfo;
+
+		memcpy(&handle, payload, sizeof(uint32_t));
+
+		devinfo = devices_find(handle);
+		if (!devinfo) {
+			DEBUG(1, "%s: WARNING: got paired message for device handle %d, but couldn't find the corresponding handle in the device list. This event will be ignored.\n", __func__, handle);
+		} else {
+			generate_event(callback, devinfo, UE_DEVICE_PAIRED, user_data);
+		}
 	} else if (hdr.length > 0) {
 		DEBUG(1, "%s: Unexpected message type %d length %d received!\n", __func__, hdr.message, hdr.length);
 	}
