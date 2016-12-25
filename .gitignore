@@ -35,3 +35,4 @@ docs/html
 libusbmuxd.pc
 tools/.libs/*
 tools/iproxy
+.DS_Store
