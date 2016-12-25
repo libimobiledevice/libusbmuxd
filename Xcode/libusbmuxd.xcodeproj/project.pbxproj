@@ -59,6 +59,7 @@
 				C847BE801A751F8B00271179 /* common */,
 				C847BE7A1A751F2A00271179 /* Products */,
 				C847BE861A751F8B00271179 /* src */,
+				C8A97D6E1E0FAABE0013886F /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -99,6 +100,13 @@
 				C847BE951A751FA300271179 /* libplist.a */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		C8A97D6E1E0FAABE0013886F /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
