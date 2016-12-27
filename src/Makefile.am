@@ -1,7 +1,7 @@
 AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/common
 
 AM_CFLAGS = $(GLOBAL_CFLAGS) $(libplist_CFLAGS)
-AM_LDFLAGS = $(GLOBAL_LIBS) $(libpthread_LIBS) $(libplist_LIBS)
+AM_LDFLAGS = $(GLOBAL_LIBS) $(libplist_LIBS)
 
 lib_LTLIBRARIES = libusbmuxd.la
 libusbmuxd_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(LIBUSBMUXD_SO_VERSION) -no-undefined
