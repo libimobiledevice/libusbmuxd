@@ -19,19 +19,23 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#ifdef _MSC_VER 
+#include "..\src\msc_config.h"
+#endif
+
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <errno.h>
-#include <sys/time.h>
 #include <sys/stat.h>
 #ifdef WIN32
 #include <winsock2.h>
 #include <windows.h>
 static int wsa_init = 0;
 #else
+#include <unistd.h>
+#include <sys/time.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <netinet/in.h>
