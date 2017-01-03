@@ -47,10 +47,15 @@
 #define EBADMSG 104
 #endif
 
+#include <unistd.h>
+#include <signal.h>
+
 #ifdef WIN32
 #include <winsock2.h>
 #include <windows.h>
+#ifndef HAVE_SLEEP
 #define sleep(x) Sleep(x*1000)
+#endif
 #else
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -64,9 +69,6 @@
 #define USBMUXD_DIRNAME "/var/run"
 #define USBMUXD_SOCKET_NAME "usbmuxd"
 #endif /* HAVE_INOTIFY */
-
-#include <unistd.h>
-#include <signal.h>
 
 #include <plist/plist.h>
 #define PLIST_BUNDLE_ID "org.libimobiledevice.usbmuxd"
