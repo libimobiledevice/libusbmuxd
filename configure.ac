@@ -8,7 +8,7 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
 AC_CONFIG_SRCDIR([src/])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
-
+AC_SEARCH_LIBS(socket, network)
 dnl libtool versioning
 # +1 : 0 : +1  == adds new functions to the interface
 # +1 : 0 : 0   == changes or removes functions (changes include both
