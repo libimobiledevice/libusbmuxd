@@ -32,6 +32,8 @@ enum fd_mode {
 };
 typedef enum fd_mode fd_mode;
 
+#define SOCKET_CANCEL_FD_NONE -1
+
 #ifdef WIN32
 #include <winsock2.h>
 #define SHUT_RD SD_READ
@@ -47,7 +49,7 @@ int socket_connect_unix(const char *filename);
 #endif
 int socket_create(uint16_t port);
 int socket_connect(const char *addr, uint16_t port);
-int socket_check_fd(int fd, fd_mode fdm, unsigned int timeout);
+int socket_check_fd(int fd, fd_mode fdm, unsigned int timeout, int cancel_fd);
 int socket_accept(int fd, uint16_t port);
 
 int socket_shutdown(int fd, int how);
@@ -56,7 +58,7 @@ int socket_close(int fd);
 int socket_receive(int fd, void *data, size_t size);
 int socket_peek(int fd, void *data, size_t size);
 int socket_receive_timeout(int fd, void *data, size_t size, int flags,
-					 unsigned int timeout);
+					 unsigned int timeout, int cancel_fd);
 
 int socket_send(int fd, void *data, size_t size);
 

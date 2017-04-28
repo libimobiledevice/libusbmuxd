@@ -348,9 +348,10 @@ int socket_connect(const char *addr, uint16_t port)
 	return sfd;
 }
 
-int socket_check_fd(int fd, fd_mode fdm, unsigned int timeout)
+int socket_check_fd(int fd, fd_mode fdm, unsigned int timeout, int cancel_fd)
 {
-	fd_set fds;
+	fd_set target_set, extra_set, *read_set, *write_set, *except_set, *cancel_set;
+	int nfds;
 	int sret;
 	int eagain;
 	struct timeval to;
@@ -362,8 +363,44 @@ int socket_check_fd(int fd, fd_mode fdm, unsigned int timeout)
 		return -1;
 	}
 
-	FD_ZERO(&fds);
-	FD_SET(fd, &fds);
+	FD_ZERO(&target_set);
+	FD_SET(fd, &target_set);
+
+	read_set = NULL;
+	write_set = NULL;
+	except_set = NULL;
+
+	switch (fdm) {
+	case FDM_READ:
+		read_set = &target_set;
+		break;
+	case FDM_WRITE:
+		write_set = &target_set;
+		break;
+	case FDM_EXCEPT:
+		except_set = &target_set;
+		break;
+	default:
+		return -1;
+	}
+
+	if (cancel_fd != SOCKET_CANCEL_FD_NONE) {
+		if (fdm == FDM_READ) {
+			cancel_set = &target_set;
+		} else {
+			read_set = &extra_set;
+			cancel_set = &extra_set;
+			FD_ZERO(&extra_set);
+		}
+
+		FD_SET(cancel_fd, cancel_set);
+
+		nfds = ((fd > cancel_fd) ? fd : cancel_fd) + 1;
+	} else {
+		cancel_set = NULL;
+
+		nfds = fd + 1;
+	}
 
 	if (timeout > 0) {
 		to.tv_sec = (time_t) (timeout / 1000);
@@ -377,20 +414,8 @@ int socket_check_fd(int fd, fd_mode fdm, unsigned int timeout)
 
 	do {
 		eagain = 0;
-		switch (fdm) {
-		case FDM_READ:
-			sret = select(fd + 1, &fds, NULL, NULL, pto);
-			break;
-		case FDM_WRITE:
-			sret = select(fd + 1, NULL, &fds, NULL, pto);
-			break;
-		case FDM_EXCEPT:
-			sret = select(fd + 1, NULL, NULL, &fds, pto);
-			break;
-		default:
-			return -1;
-		}
 
+		sret = select(nfds, read_set, write_set, except_set, pto);
 		if (sret < 0) {
 			switch (errno) {
 			case EINTR:
@@ -409,6 +434,9 @@ int socket_check_fd(int fd, fd_mode fdm, unsigned int timeout)
 							strerror(errno));
 				return -1;
 			}
+		} else if (cancel_set != NULL && FD_ISSET(cancel_fd, cancel_set)) {
+			errno = ECANCELED;
+			return -1;
 		}
 	} while (eagain);
 
@@ -451,22 +479,22 @@ int socket_close(int fd) {
 
 int socket_receive(int fd, void *data, size_t length)
 {
-	return socket_receive_timeout(fd, data, length, 0, RECV_TIMEOUT);
+	return socket_receive_timeout(fd, data, length, 0, RECV_TIMEOUT, SOCKET_CANCEL_FD_NONE);
 }
 
 int socket_peek(int fd, void *data, size_t length)
 {
-	return socket_receive_timeout(fd, data, length, MSG_PEEK, RECV_TIMEOUT);
+	return socket_receive_timeout(fd, data, length, MSG_PEEK, RECV_TIMEOUT, SOCKET_CANCEL_FD_NONE);
 }
 
 int socket_receive_timeout(int fd, void *data, size_t length, int flags,
-					 unsigned int timeout)
+					 unsigned int timeout, int cancel_fd)
 {
 	int res;
 	int result;
 
 	// check if data is available
-	res = socket_check_fd(fd, FDM_READ, timeout);
+	res = socket_check_fd(fd, FDM_READ, timeout, cancel_fd);
 	if (res <= 0) {
 		return res;
 	}

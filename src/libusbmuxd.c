@@ -115,6 +115,7 @@ static usbmuxd_event_cb_t event_cb = NULL;
 HANDLE devmon = NULL;
 #else
 pthread_t devmon;
+static int cancelfds[2] = { -1, -1 };
 #endif
 static int listenfd = -1;
 
@@ -305,7 +306,7 @@ static usbmuxd_device_info_t *device_info_from_device_record(struct usbmuxd_devi
 	return devinfo;
 }
 
-static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload, int timeout)
+static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload, int timeout, int cancel_fd)
 {
 	int recv_len;
 	struct usbmuxd_header hdr;
@@ -316,7 +317,7 @@ static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload
 	header->message = 0;
 	header->tag = 0;
 
-	recv_len = socket_receive_timeout(sfd, &hdr, sizeof(hdr), 0, timeout);
+	recv_len = socket_receive_timeout(sfd, &hdr, sizeof(hdr), 0, timeout, cancel_fd);
 	if (recv_len < 0) {
 		LIBUSBMUXD_DEBUG(1, "%s: Error receiving packet: %d\n", __func__, recv_len);
 		return recv_len;
@@ -330,7 +331,7 @@ static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload
 		payload_loc = (char*)malloc(payload_size);
 		uint32_t rsize = 0;
 		do {
-			int res = socket_receive_timeout(sfd, payload_loc + rsize, payload_size - rsize, 0, 5000);
+			int res = socket_receive_timeout(sfd, payload_loc + rsize, payload_size - rsize, 0, 5000, cancel_fd);
 			if (res < 0) {
 				break;
 			}
@@ -449,7 +450,7 @@ static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload
 /**
  * Retrieves the result code to a previously sent request.
  */
-static int usbmuxd_get_result(int sfd, uint32_t tag, uint32_t *result, void **result_plist)
+static int usbmuxd_get_result(int sfd, uint32_t tag, uint32_t *result, void **result_plist, int cancel_fd)
 {
 	struct usbmuxd_header hdr;
 	int recv_len;
@@ -463,7 +464,7 @@ static int usbmuxd_get_result(int sfd, uint32_t tag, uint32_t *result, void **re
 		*result_plist = NULL;
 	}
 
-	recv_len = receive_packet(sfd, &hdr, (void**)&res, 5000);
+	recv_len = receive_packet(sfd, &hdr, (void**)&res, 5000, cancel_fd);
 	if (recv_len < 0 || (size_t)recv_len < sizeof(hdr)) {
 		free(res);
 		return (recv_len < 0 ? recv_len : -EPROTO);
@@ -905,7 +906,7 @@ end:
 /**
  * Tries to connect to usbmuxd and wait if it is not running.
  */
-static int usbmuxd_listen()
+static int usbmuxd_listen(int cancel_fd)
 {
 	int sfd;
 	uint32_t res = -1;
@@ -932,7 +933,7 @@ retry:
 		socket_close(sfd);
 		return -1;
 	}
-	if ((usbmuxd_get_result(sfd, tag, &res, NULL) == 1) && (res != 0)) {
+	if ((usbmuxd_get_result(sfd, tag, &res, NULL, cancel_fd) == 1) && (res != 0)) {
 		socket_close(sfd);
 		if ((res == RESULT_BADVERSION) && (proto_version == 1)) {
 			proto_version = 0;
@@ -948,13 +949,13 @@ retry:
  * Waits for an event to occur, i.e. a packet coming from usbmuxd.
  * Calls generate_event to pass the event via callback to the client program.
  */
-static int get_next_event(int sfd, usbmuxd_event_cb_t callback, void *user_data)
+static int get_next_event(int sfd, usbmuxd_event_cb_t callback, void *user_data, int cancel_fd)
 {
 	struct usbmuxd_header hdr;
 	void *payload = NULL;
 
 	/* block until we receive something */
-	if (receive_packet(sfd, &hdr, &payload, 0) < 0) {
+	if (receive_packet(sfd, &hdr, &payload, 0, cancel_fd) < 0) {
 		LIBUSBMUXD_DEBUG(1, "%s: Error in usbmuxd connection, disconnecting all devices!\n", __func__);
 		// when then usbmuxd connection fails,
 		// generate remove events for every device that
@@ -1033,29 +1034,23 @@ static void *device_monitor(void *data)
 {
 	collection_init(&devices);
 
-#ifndef WIN32
-	pthread_cleanup_push(device_monitor_cleanup, NULL);
-#endif
 	while (event_cb) {
 
-		listenfd = usbmuxd_listen();
+		listenfd = usbmuxd_listen(cancelfds[0]);
 		if (listenfd < 0) {
 			continue;
 		}
 
 		while (event_cb) {
-			int res = get_next_event(listenfd, event_cb, data);
+			int res = get_next_event(listenfd, event_cb, data, cancelfds[0]);
 			if (res < 0) {
 			    break;
 			}
 		}
 	}
 
-#ifndef WIN32
-	pthread_cleanup_pop(1);
-#else
 	device_monitor_cleanup(NULL);
-#endif
+
 	return NULL;
 }
 
@@ -1075,6 +1070,11 @@ USBMUXD_API int usbmuxd_subscribe(usbmuxd_event_cb_t callback, void *user_data)
 		res = GetLastError();
 	}
 #else
+	res = pipe(cancelfds);
+	if (res != 0) {
+		return -errno;
+	}
+
 	res = pthread_create(&devmon, NULL, device_monitor, user_data);
 #endif
 	if (res != 0) {
@@ -1099,14 +1099,20 @@ USBMUXD_API int usbmuxd_unsubscribe()
 		}
 	}
 #else
-	res = pthread_kill(devmon, 0);
-	if (res == 0) {
-		pthread_cancel(devmon);
-		res = pthread_join(devmon, NULL);
-	}
+	do {
+		char dummy = 1;
+		res = write(cancelfds[1], &dummy, sizeof(dummy));
+	} while ((res == -1) && (errno == EINTR));
+
+	res = pthread_join(devmon, NULL);
 	if ((res != 0) && (res != ESRCH)) {
 		return res;
 	}
+
+	close(cancelfds[0]);
+	close(cancelfds[1]);
+	cancelfds[0] = -1;
+	cancelfds[1] = -1;
 #endif
 
 	return 0;
@@ -1137,7 +1143,7 @@ retry:
 	if ((proto_version == 1) && (try_list_devices)) {
 		if (send_list_devices_packet(sfd, tag) > 0) {
 			plist_t list = NULL;
-			if ((usbmuxd_get_result(sfd, tag, &res, &list) == 1) && (res == 0)) {
+			if ((usbmuxd_get_result(sfd, tag, &res, &list, SOCKET_CANCEL_FD_NONE) == 1) && (res == 0)) {
 				plist_t devlist = plist_dict_get_item(list, "DeviceList");
 				if (devlist && plist_get_node_type(devlist) == PLIST_ARRAY) {
 					collection_init(&tmpdevs);
@@ -1175,7 +1181,7 @@ retry:
 	if (send_listen_packet(sfd, tag) > 0) {
 		res = -1;
 		// get response
-		if ((usbmuxd_get_result(sfd, tag, &res, NULL) == 1) && (res == 0)) {
+		if ((usbmuxd_get_result(sfd, tag, &res, NULL, SOCKET_CANCEL_FD_NONE) == 1) && (res == 0)) {
 			listen_success = 1;
 		} else {
 			socket_close(sfd);
@@ -1198,7 +1204,7 @@ retry:
 
 	// receive device list
 	while (1) {
-		if (receive_packet(sfd, &hdr, &payload, 100) > 0) {
+		if (receive_packet(sfd, &hdr, &payload, 100, SOCKET_CANCEL_FD_NONE) > 0) {
 			if (hdr.message == MESSAGE_DEVICE_ADD) {
 				usbmuxd_device_info_t *devinfo = payload;
 				collection_add(&tmpdevs, devinfo);
@@ -1390,7 +1396,7 @@ retry:
 	} else {
 		// read ACK
 		LIBUSBMUXD_DEBUG(2, "%s: Reading connect result...\n", __func__);
-		if (usbmuxd_get_result(sfd, tag, &res, NULL) == 1) {
+		if (usbmuxd_get_result(sfd, tag, &res, NULL, SOCKET_CANCEL_FD_NONE) == 1) {
 			if (res == 0) {
 				LIBUSBMUXD_DEBUG(2, "%s: Connect success!\n", __func__);
 				connected = 1;
@@ -1444,7 +1450,7 @@ USBMUXD_API int usbmuxd_send(int sfd, const char *data, uint32_t len, uint32_t *
 
 USBMUXD_API int usbmuxd_recv_timeout(int sfd, char *data, uint32_t len, uint32_t *recv_bytes, unsigned int timeout)
 {
-	int num_recv = socket_receive_timeout(sfd, (void*)data, len, 0, timeout);
+	int num_recv = socket_receive_timeout(sfd, (void*)data, len, 0, timeout, SOCKET_CANCEL_FD_NONE);
 	if (num_recv < 0) {
 		*recv_bytes = 0;
 		return num_recv;
@@ -1484,7 +1490,7 @@ USBMUXD_API int usbmuxd_read_buid(char **buid)
 	} else {
 		uint32_t rc = 0;
 		plist_t pl = NULL;
-		ret = usbmuxd_get_result(sfd, tag, &rc, &pl);
+		ret = usbmuxd_get_result(sfd, tag, &rc, &pl, SOCKET_CANCEL_FD_NONE);
 		if ((ret == 1) && (rc == 0)) {
 			plist_t node = plist_dict_get_item(pl, "BUID");
 			if (node && plist_get_node_type(node) == PLIST_STRING) {
@@ -1528,7 +1534,7 @@ USBMUXD_API int usbmuxd_read_pair_record(const char* record_id, char **record_da
 	} else {
 		uint32_t rc = 0;
 		plist_t pl = NULL;
-		ret = usbmuxd_get_result(sfd, tag, &rc, &pl);
+		ret = usbmuxd_get_result(sfd, tag, &rc, &pl, SOCKET_CANCEL_FD_NONE);
 		if ((ret == 1) && (rc == 0)) {
 			plist_t node = plist_dict_get_item(pl, "PairRecordData");
 			if (node && plist_get_node_type(node) == PLIST_DATA) {
@@ -1574,7 +1580,7 @@ USBMUXD_API int usbmuxd_save_pair_record_with_device_id(const char* record_id, u
 		LIBUSBMUXD_DEBUG(1, "%s: Error sending SavePairRecord message!\n", __func__);
 	} else {
 		uint32_t rc = 0;
-		ret = usbmuxd_get_result(sfd, tag, &rc, NULL);
+		ret = usbmuxd_get_result(sfd, tag, &rc, NULL, SOCKET_CANCEL_FD_NONE);
 		if ((ret == 1) && (rc == 0)) {
 			ret = 0;
 		} else if (ret == 1) {
@@ -1617,7 +1623,7 @@ USBMUXD_API int usbmuxd_delete_pair_record(const char* record_id)
 		LIBUSBMUXD_DEBUG(1, "%s: Error sending DeletePairRecord message!\n", __func__);
 	} else {
 		uint32_t rc = 0;
-		ret = usbmuxd_get_result(sfd, tag, &rc, NULL);
+		ret = usbmuxd_get_result(sfd, tag, &rc, NULL, SOCKET_CANCEL_FD_NONE);
 		if ((ret == 1) && (rc == 0)) {
 			ret = 0;
 		} else if (ret == 1) {
