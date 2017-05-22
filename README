@@ -31,6 +31,13 @@ To compile run:
 	make
 	sudo make install
 
+If dependent packages cannot be found when running autogen.sh (or configure)
+make sure that pkg-config is installed and set the PKG_CONFIG_PATH environment
+variable if required. It can be passed directly like this:
+
+PKG_CONFIG_PATH=/usr/local/lib/pkgconfig ./autogen.sh
+
+
 Who/What/Where?
 ===============
 
@@ -44,7 +51,7 @@ Code (Mirror):
 	git clone https://github.com/libimobiledevice/libusbmuxd.git
 
 Tickets:
-	http://github.com/libimobiledevice/libusbmuxd/issues
+	https://github.com/libimobiledevice/libusbmuxd/issues
 
 Mailing List:
 	http://lists.libimobiledevice.org/mailman/listinfo/libimobiledevice-devel
@@ -60,4 +67,4 @@ libimobiledevice is an independent software library and has not been
 authorized, sponsored, or otherwise approved by Apple Inc.
 
 README Updated on:
-	2014-10-02
+	2017-05-21
