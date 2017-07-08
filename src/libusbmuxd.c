@@ -412,7 +412,7 @@ static plist_t create_plist_message(const char* message_type)
 	plist_dict_set_item(plist, "BundleID", plist_new_string(PLIST_BUNDLE_ID));
 	plist_dict_set_item(plist, "ClientVersionString", plist_new_string(PLIST_CLIENT_VERSION_STRING));
 	plist_dict_set_item(plist, "MessageType", plist_new_string(message_type));
-	plist_dict_set_item(plist, "ProgName", plist_new_string(PLIST_PROGNAME));	
+	plist_dict_set_item(plist, "ProgName", plist_new_string(PLIST_PROGNAME));
 	plist_dict_set_item(plist, "kLibUSBMuxVersion", plist_new_uint(PLIST_LIBUSBMUX_VERSION));
 	return plist;
 }
@@ -497,7 +497,7 @@ static int send_pair_record_packet(int sfd, uint32_t tag, const char* msgtype, c
 	if (data) {
 		plist_dict_set_item(plist, "PairRecordData", plist_copy(data));
 	}
-	
+
 	res = send_plist_packet(sfd, tag, plist);
 	plist_free(plist);
 
@@ -1040,7 +1040,31 @@ USBMUXD_API int usbmuxd_get_device_by_udid(const char *udid, usbmuxd_device_info
 			result = 1;
 			break;
 		}
-		if (!strcmp(udid, dev_list[i].udid)) {
+
+    const char* seperator = ":";
+    const unsigned short product_id_not_specified = -1;
+    unsigned short product_id = -1;
+
+    char* udid_part = NULL;
+    if (strstr(udid, seperator) != NULL) {
+      char* udid_specifier = strdup(udid);
+
+      udid_part = strtok(udid_specifier, seperator);
+      char* product_part = malloc(16);
+      char* product_part_index = (char*)udid + strlen(udid_part) + 1;
+      strncpy(product_part, product_part_index, strlen(udid) - strlen(udid_part) - 1);
+
+      product_id = (unsigned short)atoi(product_part);
+      free(product_part);
+    }
+    else {
+      udid_part = (char*)udid;
+    }
+
+		if (!strcmp(udid_part, dev_list[i].udid)) {
+      if (product_id != product_id_not_specified && product_id != dev_list[i].product_id) {
+        continue;
+      }
 			device->handle = dev_list[i].handle;
 			device->product_id = dev_list[i].product_id;
 			strcpy(device->udid, dev_list[i].udid);
@@ -1111,7 +1135,7 @@ USBMUXD_API int usbmuxd_send(int sfd, const char *data, uint32_t len, uint32_t *
 	if (sfd < 0) {
 		return -EINVAL;
 	}
-	
+
 	num_sent = socket_send(sfd, (void*)data, len);
 	if (num_sent < 0) {
 		*sent_bytes = 0;
