@@ -140,7 +140,7 @@ static struct usbmuxd_device_record* device_record_from_plist(plist_t props)
 	if (!dev)
 		return NULL;
 	memset(dev, 0, sizeof(struct usbmuxd_device_record));
-
+    
 	n = plist_dict_get_item(props, "DeviceID");
 	if (n && plist_get_node_type(n) == PLIST_UINT) {
 		plist_get_uint_val(n, &val);
@@ -166,7 +166,18 @@ static struct usbmuxd_device_record* device_record_from_plist(plist_t props)
 		plist_get_uint_val(n, &val);
 		dev->location = (uint32_t)val;
 	}
+    
+    
+    n = plist_dict_get_item(props, "ConnectionType");
+    if (n && plist_get_node_type(n) == PLIST_STRING) {
+        plist_get_string_val(n, &strval);
+        if (strval) {
+            strncpy(dev->connection_type, strval, 15);
+            free(strval);
+        }
+    }
 
+ /*   printf("DeviceID:%u, ConnectionType:%s\n", dev->device_id, dev->connecion_type);*/
 	return dev;
 }
 
@@ -894,15 +905,18 @@ retry:
 						plist_t pdev = plist_array_get_item(devlist, i);
 						plist_t props = plist_dict_get_item(pdev, "Properties");
 						dev = device_record_from_plist(props);
-						usbmuxd_device_info_t *devinfo = device_info_from_device_record(dev);
-						free(dev);
-						if (!devinfo) {
-							socket_close(sfd);
-							DEBUG(1, "%s: can't create device info object\n", __func__);
-							plist_free(list);
-							return -1;
-						}
-						collection_add(&tmpdevs, devinfo);
+                        if (strcmp(dev->connection_type, "USB") == 0) {
+                            usbmuxd_device_info_t *devinfo = device_info_from_device_record(dev);
+                            free(dev);
+                            if (!devinfo) {
+                                socket_close(sfd);
+                                DEBUG(1, "%s: can't create device info object\n", __func__);
+                                plist_free(list);
+                                return -1;
+                            }
+                            collection_add(&tmpdevs, devinfo);
+                        }
+						
 					}
 					plist_free(list);
 					goto got_device_list;

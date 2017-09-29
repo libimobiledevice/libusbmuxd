@@ -84,6 +84,7 @@ struct usbmuxd_device_record {
 	uint32_t device_id;
 	uint16_t product_id;
 	char serial_number[256];
+    char connection_type[16];
 	uint16_t padding;
 	uint32_t location;
 } __attribute__((__packed__));
