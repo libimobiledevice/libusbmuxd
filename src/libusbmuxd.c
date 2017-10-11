@@ -916,7 +916,9 @@ retry:
                             }
                             collection_add(&tmpdevs, devinfo);
                         }
-						
+                        else {
+                            free(dev);
+                        }
 					}
 					plist_free(list);
 					goto got_device_list;
