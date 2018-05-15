@@ -35,6 +35,7 @@ static int wsa_init = 0;
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <netdb.h>
 #include <arpa/inet.h>
 #endif
@@ -116,6 +117,7 @@ int socket_connect_unix(const char *filename)
 #ifdef SO_NOSIGPIPE
 	int yes = 1;
 #endif
+	int bufsize = 0x20000;
 
 	// check if socket file exists...
 	if (stat(filename, &fst) != 0) {
@@ -136,6 +138,14 @@ int socket_connect_unix(const char *filename)
 		if (verbose >= 2)
 			fprintf(stderr, "%s: socket: %s\n", __func__, strerror(errno));
 		return -1;
+	}
+
+	if (setsockopt(sfd, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(int)) == -1) {
+		perror("Could not set send buffer for socket");
+	}
+
+	if (setsockopt(sfd, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(int)) == -1) {
+		perror("Could not set receive buffer for socket");
 	}
 
 #ifdef SO_NOSIGPIPE
@@ -225,6 +235,7 @@ int socket_connect(const char *addr, uint16_t port)
 {
 	int sfd = -1;
 	int yes = 1;
+	int bufsize = 0x20000;
 	struct hostent *hp;
 	struct sockaddr_in saddr;
 #ifdef WIN32
@@ -274,6 +285,18 @@ int socket_connect(const char *addr, uint16_t port)
 		return -1;
 	}
 #endif
+
+	if (setsockopt(sfd, IPPROTO_TCP, TCP_NODELAY, (void*)&yes, sizeof(int)) == -1) {
+		perror("Could not set TCP_NODELAY on socket");
+	}
+
+	if (setsockopt(sfd, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(int)) == -1) {
+		perror("Could not set send buffer for socket");
+	}
+
+	if (setsockopt(sfd, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(int)) == -1) {
+		perror("Could not set receive buffer for socket");
+	}
 
 	memset((void *) &saddr, 0, sizeof(saddr));
 	saddr.sin_family = AF_INET;
