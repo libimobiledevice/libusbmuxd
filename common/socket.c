@@ -55,7 +55,6 @@ int socket_create_unix(const char *filename)
 {
 	struct sockaddr_un name;
 	int sock;
-	size_t size;
 #ifdef SO_NOSIGPIPE
 	int yes = 1;
 #endif
@@ -64,7 +63,7 @@ int socket_create_unix(const char *filename)
 	unlink(filename);
 
 	/* Create the socket. */
-	sock = socket(PF_LOCAL, SOCK_STREAM, 0);
+	sock = socket(PF_UNIX, SOCK_STREAM, 0);
 	if (sock < 0) {
 		perror("socket");
 		return -1;
@@ -79,21 +78,11 @@ int socket_create_unix(const char *filename)
 #endif
 
 	/* Bind a name to the socket. */
-	name.sun_family = AF_LOCAL;
+	name.sun_family = AF_UNIX;
 	strncpy(name.sun_path, filename, sizeof(name.sun_path));
 	name.sun_path[sizeof(name.sun_path) - 1] = '\0';
 
-	/* The size of the address is
-	   the offset of the start of the filename,
-	   plus its length,
-	   plus one for the terminating null byte.
-	   Alternatively you can just do:
-	   size = SUN_LEN (&name);
-	 */
-	size = (offsetof(struct sockaddr_un, sun_path)
-			+ strlen(name.sun_path) + 1);
-
-	if (bind(sock, (struct sockaddr *) &name, size) < 0) {
+	if (bind(sock, (struct sockaddr *) &name, sizeof(name)) < 0) {
 		perror("bind");
 		socket_close(sock);
 		return -1;
@@ -112,7 +101,6 @@ int socket_connect_unix(const char *filename)
 {
 	struct sockaddr_un name;
 	int sfd = -1;
-	size_t size;
 	struct stat fst;
 #ifdef SO_NOSIGPIPE
 	int yes = 1;
@@ -134,7 +122,7 @@ int socket_connect_unix(const char *filename)
 		return -1;
 	}
 	// make a new socket
-	if ((sfd = socket(PF_LOCAL, SOCK_STREAM, 0)) < 0) {
+	if ((sfd = socket(PF_UNIX, SOCK_STREAM, 0)) < 0) {
 		if (verbose >= 2)
 			fprintf(stderr, "%s: socket: %s\n", __func__, strerror(errno));
 		return -1;
@@ -157,14 +145,11 @@ int socket_connect_unix(const char *filename)
 #endif
 
 	// and connect to 'filename'
-	name.sun_family = AF_LOCAL;
+	name.sun_family = AF_UNIX;
 	strncpy(name.sun_path, filename, sizeof(name.sun_path));
 	name.sun_path[sizeof(name.sun_path) - 1] = 0;
 
-	size = (offsetof(struct sockaddr_un, sun_path)
-			+ strlen(name.sun_path) + 1);
-
-	if (connect(sfd, (struct sockaddr *) &name, size) < 0) {
+	if (connect(sfd, (struct sockaddr*)&name, sizeof(name)) < 0) {
 		socket_close(sfd);
 		if (verbose >= 2)
 			fprintf(stderr, "%s: connect: %s\n", __func__,
