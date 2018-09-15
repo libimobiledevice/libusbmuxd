@@ -644,7 +644,7 @@ static int send_read_buid_packet(int sfd, uint32_t tag)
 	return res;
 }
 
-static int send_pair_record_packet(int sfd, uint32_t tag, const char* msgtype, const char* pair_record_id, plist_t data)
+static int send_pair_record_packet(int sfd, uint32_t tag, const char* msgtype, const char* pair_record_id, uint32_t device_id, plist_t data)
 {
 	int res = -1;
 
@@ -653,6 +653,9 @@ static int send_pair_record_packet(int sfd, uint32_t tag, const char* msgtype, c
 	plist_dict_set_item(plist, "PairRecordID", plist_new_string(pair_record_id));
 	if (data) {
 		plist_dict_set_item(plist, "PairRecordData", plist_copy(data));
+	}
+	if (device_id > 0) {
+		plist_dict_set_item(plist, "DeviceID", plist_new_uint(device_id));
 	}
 	
 	res = send_plist_packet(sfd, tag, plist);
@@ -1365,7 +1368,7 @@ USBMUXD_API int usbmuxd_read_pair_record(const char* record_id, char **record_da
 	proto_version = 1;
 	tag = ++use_tag;
 
-	if (send_pair_record_packet(sfd, tag, "ReadPairRecord", record_id, NULL) <= 0) {
+	if (send_pair_record_packet(sfd, tag, "ReadPairRecord", record_id, 0, NULL) <= 0) {
 		DEBUG(1, "%s: Error sending ReadPairRecord message!\n", __func__);
 	} else {
 		uint32_t rc = 0;
@@ -1391,7 +1394,7 @@ USBMUXD_API int usbmuxd_read_pair_record(const char* record_id, char **record_da
 	return ret;
 }
 
-USBMUXD_API int usbmuxd_save_pair_record(const char* record_id, const char *record_data, uint32_t record_size)
+USBMUXD_API int usbmuxd_save_pair_record_with_device_id(const char* record_id, uint32_t device_id, const char *record_data, uint32_t record_size)
 {
 	int sfd;
 	int tag;
@@ -1412,7 +1415,7 @@ USBMUXD_API int usbmuxd_save_pair_record(const char* record_id, const char *reco
 	tag = ++use_tag;
 
 	plist_t data = plist_new_data(record_data, record_size);
-	if (send_pair_record_packet(sfd, tag, "SavePairRecord", record_id, data) <= 0) {
+	if (send_pair_record_packet(sfd, tag, "SavePairRecord", record_id, device_id, data) <= 0) {
 		DEBUG(1, "%s: Error sending SavePairRecord message!\n", __func__);
 	} else {
 		uint32_t rc = 0;
@@ -1428,6 +1431,11 @@ USBMUXD_API int usbmuxd_save_pair_record(const char* record_id, const char *reco
 	socket_close(sfd);
 
 	return ret;
+}
+
+USBMUXD_API int usbmuxd_save_pair_record(const char* record_id, const char *record_data, uint32_t record_size)
+{
+	return usbmuxd_save_pair_record_with_device_id(record_id, 0, record_data, record_size);
 }
 
 USBMUXD_API int usbmuxd_delete_pair_record(const char* record_id)
@@ -1450,7 +1458,7 @@ USBMUXD_API int usbmuxd_delete_pair_record(const char* record_id)
 	proto_version = 1;
 	tag = ++use_tag;
 
-	if (send_pair_record_packet(sfd, tag, "DeletePairRecord", record_id, NULL) <= 0) {
+	if (send_pair_record_packet(sfd, tag, "DeletePairRecord", record_id, 0, NULL) <= 0) {
 		DEBUG(1, "%s: Error sending DeletePairRecord message!\n", __func__);
 	} else {
 		uint32_t rc = 0;

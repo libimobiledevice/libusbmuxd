@@ -209,6 +209,18 @@ int usbmuxd_read_pair_record(const char* record_id, char **record_data, uint32_t
 int usbmuxd_save_pair_record(const char* record_id, const char *record_data, uint32_t record_size);
 
 /**
+ * Save a pairing record with device identifier
+ *
+ * @param record_id the record identifier of the pairing record to save
+ * @param device_id the device identifier of the connected device, or 0
+ * @param record_data buffer containing the pairing record data
+ * @param record_size size of the buffer passed in record_data
+ *
+ * @return 0 on success, a negative error value otherwise.
+ */
+int usbmuxd_save_pair_record_with_device_id(const char* record_id, uint32_t device_id, const char *record_data, uint32_t record_size);
+
+/**
  * Delete a pairing record
  *
  * @param record_id the record identifier of the pairing record to delete.
