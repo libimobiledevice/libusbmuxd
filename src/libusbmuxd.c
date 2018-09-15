@@ -20,15 +20,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 #include <stdint.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
-
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
 
 #ifdef WIN32
   #define USBMUXD_API __declspec( dllexport )
@@ -60,6 +59,13 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <pthread.h>
+#ifdef _GNU_SOURCE
+extern char *program_invocation_short_name;
+#endif
+#ifdef __APPLE__
+extern int _NSGetExecutablePath(char* buf, uint32_t* bufsize);
+#include <sys/stat.h>
+#endif
 #endif
 
 #ifdef HAVE_INOTIFY
@@ -71,10 +77,11 @@
 #endif /* HAVE_INOTIFY */
 
 #include <plist/plist.h>
-#define PLIST_BUNDLE_ID "org.libimobiledevice.usbmuxd"
 #define PLIST_CLIENT_VERSION_STRING "usbmuxd built for freedom"
-#define PLIST_PROGNAME "libusbmuxd"
 #define PLIST_LIBUSBMUX_VERSION 3
+
+static char *bundle_id = NULL;
+static char *prog_name = NULL;
 
 // usbmuxd public interface
 #include "usbmuxd.h"
@@ -406,13 +413,163 @@ static int send_plist_packet(int sfd, uint32_t tag, plist_t message)
 	return res;
 }
 
+static void get_bundle_id()
+{
+#if defined (__APPLE__)
+	char CONTENTS_INFO_PLIST[] = "Contents/Info.plist";
+	char* execpath = malloc(1024);
+	uint32_t size = 1024;
+	if (_NSGetExecutablePath(execpath, &size) != 0) {
+		free(execpath);
+		return;
+	}
+	// strip off executable name
+	char *p = execpath + strlen(execpath) - 1;
+	while (p > execpath && *p != '/') p--;
+	if (*p == '/') *p = '\0';
+	// now walk back trying to find "/Contents/MacOS", and strip it off
+	int macos_found = 0;
+	while (p > execpath) {
+		p--;
+		if (*p != '/') continue;
+		if (strcmp(p, "/.") == 0) {
+			*p = '\0';
+		} else if (!macos_found && strcmp(p, "/MacOS") == 0) {
+			*p = '\0';
+			macos_found++;
+		} else if (macos_found && strcmp(p, "/Contents") == 0) {
+			*p = '\0';
+			break;
+		} else {
+			break;
+		}
+	}
+	// now just append "/Contents/Info.plist"
+	size_t len = strlen(execpath) + sizeof(CONTENTS_INFO_PLIST) + 1;
+	char *infopl = malloc(len);
+	snprintf(infopl, len, "%s/%s", execpath, CONTENTS_INFO_PLIST);
+	free(execpath);
+	struct stat fst;
+	fst.st_size = 0;
+	if (stat(infopl, &fst) != 0) {
+		free(infopl);
+		return;
+	}
+	size_t fsize = fst.st_size;
+	if (fsize < 8) {
+		free(infopl);
+		return;
+	}
+	FILE *f = fopen(infopl, "r");
+	free(infopl);
+	if (!f)
+		return;
+	char *buf = malloc(fsize);
+	if (!buf)
+		return;
+	if (fread(buf, 1, fsize, f) == fsize) {
+		plist_t pl = NULL;
+		if (memcmp(buf, "bplist00", 8) == 0) {
+			plist_from_bin(buf, fst.st_size, &pl);
+		} else {
+			plist_from_xml(buf, fst.st_size, &pl);
+		}
+		if (pl) {
+			plist_t bid = plist_dict_get_item(pl, "CFBundleIdentifier");
+			if (plist_get_node_type(bid) == PLIST_STRING) {
+				plist_get_string_val(bid, &bundle_id);
+			}
+			plist_free(pl);
+		}
+	}
+	free(buf);
+	fclose(f);
+#endif
+}
+
+static void get_prog_name()
+{
+#if defined(__APPLE__) || defined(__FreeBSD__)
+	const char *pname = getprogname();
+	if (pname) {
+		prog_name = strdup(pname);
+	}
+#elif defined (WIN32)
+	TCHAR *_pname = malloc((MAX_PATH+1) * sizeof(TCHAR));
+	if (GetModuleFileName(NULL, _pname, MAX_PATH+1) > 0) {
+		char* pname = NULL;
+	#if defined(UNICODE) || defined(_UNICODE)
+		char* __pname = NULL;
+		int l = WideCharToMultiByte(CP_UTF8, 0, _pname, -1, NULL, 0, NULL, NULL);
+		if (l > 0) {
+			__pname = malloc(l);
+			if (WideCharToMultiByte(CP_UTF8, 0, _pname, -1, __pname, l, NULL, NULL) > 0) {
+				pname = __pname;
+			}
+		}
+	#else
+		pname = _pname;
+	#endif
+		if (pname) {
+			char *p = pname+strlen(pname)-1;
+			while (p > pname && *p != '\\' && *p != '/') p--;
+			if (*p == '\\' || *p == '/') p++;
+			prog_name = strdup(p);
+		}
+	#if defined(UNICODE) || defined(_UNICODE)
+		free(__pname);
+	#endif
+	}
+	free(_pname);
+#elif defined (_GNU_SOURCE)
+	char *pname = program_invocation_short_name;
+	if (pname) {
+		prog_name = strdup(pname);
+	}
+#elif defined (__linux__)
+	FILE *f = fopen("/proc/self/stat", "r");
+	if (!f) {
+		return;
+	}
+	char *tmpbuf = malloc(512);
+	size_t r = fread(tmpbuf, 1, 512, f);
+	if (r > 0) {
+		char *p = tmpbuf;
+		while ((p-tmpbuf < r) && (*p != '(') && (*p != '\0')) p++;
+		if (*p == '(') {
+			p++;
+			char *pname = p;
+			while ((p-tmpbuf < r) && (*p != ')') && (*p != '\0')) p++;
+			if (*p == ')') {
+				*p = '\0';
+				prog_name = strdup(pname);
+			}
+		}
+	}
+	free(tmpbuf);
+	fclose(f);
+#else
+	#warning FIXME: no method to determine program name
+#endif
+}
+
 static plist_t create_plist_message(const char* message_type)
 {
+	if (!bundle_id) {
+		get_bundle_id();
+	}
+	if (!prog_name) {
+		get_prog_name();
+	}
 	plist_t plist = plist_new_dict();
-	plist_dict_set_item(plist, "BundleID", plist_new_string(PLIST_BUNDLE_ID));
+	if (bundle_id) {
+		plist_dict_set_item(plist, "BundleID", plist_new_string(bundle_id));
+	}
 	plist_dict_set_item(plist, "ClientVersionString", plist_new_string(PLIST_CLIENT_VERSION_STRING));
 	plist_dict_set_item(plist, "MessageType", plist_new_string(message_type));
-	plist_dict_set_item(plist, "ProgName", plist_new_string(PLIST_PROGNAME));	
+	if (prog_name) {
+		plist_dict_set_item(plist, "ProgName", plist_new_string(prog_name));
+	}
 	plist_dict_set_item(plist, "kLibUSBMuxVersion", plist_new_uint(PLIST_LIBUSBMUX_VERSION));
 	return plist;
 }
