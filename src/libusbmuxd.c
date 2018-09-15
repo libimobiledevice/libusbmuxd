@@ -77,7 +77,7 @@ extern int _NSGetExecutablePath(char* buf, uint32_t* bufsize);
 #endif /* HAVE_INOTIFY */
 
 #include <plist/plist.h>
-#define PLIST_CLIENT_VERSION_STRING "usbmuxd built for freedom"
+#define PLIST_CLIENT_VERSION_STRING PACKAGE_STRING
 #define PLIST_LIBUSBMUX_VERSION 3
 
 static char *bundle_id = NULL;
