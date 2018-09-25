@@ -128,11 +128,11 @@ int socket_connect_unix(const char *filename)
 		return -1;
 	}
 
-	if (setsockopt(sfd, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(int)) == -1) {
+	if (setsockopt(sfd, SOL_SOCKET, SO_SNDBUF, (void*)&bufsize, sizeof(int)) == -1) {
 		perror("Could not set send buffer for socket");
 	}
 
-	if (setsockopt(sfd, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(int)) == -1) {
+	if (setsockopt(sfd, SOL_SOCKET, SO_RCVBUF, (void*)&bufsize, sizeof(int)) == -1) {
 		perror("Could not set receive buffer for socket");
 	}
 
@@ -275,11 +275,11 @@ int socket_connect(const char *addr, uint16_t port)
 		perror("Could not set TCP_NODELAY on socket");
 	}
 
-	if (setsockopt(sfd, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(int)) == -1) {
+	if (setsockopt(sfd, SOL_SOCKET, SO_SNDBUF, (void*)&bufsize, sizeof(int)) == -1) {
 		perror("Could not set send buffer for socket");
 	}
 
-	if (setsockopt(sfd, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(int)) == -1) {
+	if (setsockopt(sfd, SOL_SOCKET, SO_RCVBUF, (void*)&bufsize, sizeof(int)) == -1) {
 		perror("Could not set receive buffer for socket");
 	}
 
