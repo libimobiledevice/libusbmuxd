@@ -59,7 +59,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <pthread.h>
-#ifdef _GNU_SOURCE
+#if defined(HAVE_PROGRAM_INVOCATION_SHORT_NAME) && !defined(HAVE_PROGRAM_INVOCATION_SHORT_NAME_ERRNO_H)
 extern char *program_invocation_short_name;
 #endif
 #ifdef __APPLE__
@@ -521,7 +521,7 @@ static void get_prog_name()
 	#endif
 	}
 	free(_pname);
-#elif defined (_GNU_SOURCE)
+#elif defined (HAVE_PROGRAM_INVOCATION_SHORT_NAME)
 	char *pname = program_invocation_short_name;
 	if (pname) {
 		prog_name = strdup(pname);

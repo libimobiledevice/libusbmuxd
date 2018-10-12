@@ -82,6 +82,24 @@ case ${host_os} in
     AC_MSG_RESULT([yes])
     AX_PTHREAD([], [AC_MSG_ERROR([pthread is required to build libusbmuxd])])
     AC_CHECK_LIB(pthread, [pthread_create, pthread_mutex_lock], [], [AC_MSG_ERROR([pthread is required to build libusbmuxd])])
+    AC_CACHE_CHECK(for program_invocation_short_name, ac_cv_program_invocation_short_name,[
+        AC_TRY_LINK([extern char* program_invocation_short_name;],[return program_invocation_short_name;],
+            [ac_cv_program_invocation_short_name=yes],
+            [ac_cv_program_invocation_short_name=no]
+        )
+    ])
+    if test "x$ac_cv_program_invocation_short_name" = "xyes"; then
+        AC_DEFINE(HAVE_PROGRAM_INVOCATION_SHORT_NAME, 1, [Define if you have program_invocation_short_name])
+        AC_CACHE_CHECK(if program_invocation_short_name is declared in errno.h, ac_cv_program_invocation_short_name_errno_h,[
+            AC_TRY_LINK([#include <errno.h>],[return program_invocation_short_name;],
+                [ac_cv_program_invocation_short_name_errno_h=yes],
+                [ac_cv_program_invocation_short_name_errno_h=no]
+            )
+        ])
+        if test "x$ac_cv_program_invocation_short_name_errno_h" = "xyes"; then
+            AC_DEFINE(HAVE_PROGRAM_INVOCATION_SHORT_NAME_ERRNO_H, 1, [Define if program_invocation_short_name is declared in errno.h])
+        fi
+    fi
     ;;
 esac
 AM_CONDITIONAL(WIN32, test x$win32 = xtrue)
