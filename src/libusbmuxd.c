@@ -812,6 +812,34 @@ retry:
 	return sfd;
 }
 
+static usbmuxd_device_info_t *device_info_from_device_record(struct usbmuxd_device_record *dev)
+{
+	if (!dev) {
+		return NULL;
+	}
+	usbmuxd_device_info_t *devinfo = (usbmuxd_device_info_t*)malloc(sizeof(usbmuxd_device_info_t));
+	if (!devinfo) {
+		DEBUG(1, "%s: Out of memory!\n", __func__);
+		return NULL;
+	}
+
+	devinfo->handle = dev->device_id;
+	devinfo->product_id = dev->product_id;
+	memset(devinfo->udid, '\0', sizeof(devinfo->udid));
+	memcpy(devinfo->udid, dev->serial_number, sizeof(devinfo->udid));
+
+	if (strlen(devinfo->udid) == 24) {
+		memmove(&devinfo->udid[9], &devinfo->udid[8], 17);
+		devinfo->udid[8] = '-';
+	}
+
+	if (strcasecmp(devinfo->udid, "ffffffffffffffffffffffffffffffffffffffff") == 0) {
+		sprintf(devinfo->udid + 32, "%08x", devinfo->handle);
+	}
+
+	return devinfo;
+}
+
 /**
  * Waits for an event to occur, i.e. a packet coming from usbmuxd.
  * Calls generate_event to pass the event via callback to the client program.
@@ -841,28 +869,11 @@ static int get_next_event(int sfd, usbmuxd_event_cb_t callback, void *user_data)
 	}
 
 	if (hdr.message == MESSAGE_DEVICE_ADD) {
-		struct usbmuxd_device_record *dev = payload;
-		usbmuxd_device_info_t *devinfo = (usbmuxd_device_info_t*)malloc(sizeof(usbmuxd_device_info_t));
+		usbmuxd_device_info_t *devinfo = device_info_from_device_record(payload);
 		if (!devinfo) {
-			DEBUG(1, "%s: Out of memory!\n", __func__);
 			free(payload);
 			return -1;
 		}
-
-		devinfo->handle = dev->device_id;
-		devinfo->product_id = dev->product_id;
-		memset(devinfo->udid, '\0', sizeof(devinfo->udid));
-		memcpy(devinfo->udid, dev->serial_number, sizeof(devinfo->udid));
-
-		if (strlen(devinfo->udid) == 24) {
-			memmove(&devinfo->udid[9], &devinfo->udid[8], 17);
-			devinfo->udid[8] = '-';
-		}
-
-		if (strcasecmp(devinfo->udid, "ffffffffffffffffffffffffffffffffffffffff") == 0) {
-			sprintf(devinfo->udid + 32, "%08x", devinfo->handle);
-		}
-
 		collection_add(&devices, devinfo);
 		generate_event(callback, devinfo, UE_DEVICE_ADD, user_data);
 	} else if (hdr.message == MESSAGE_DEVICE_REMOVE) {
@@ -998,34 +1009,6 @@ USBMUXD_API int usbmuxd_unsubscribe()
 #endif
 
 	return 0;
-}
-
-static usbmuxd_device_info_t *device_info_from_device_record(struct usbmuxd_device_record *dev)
-{
-	if (!dev) {
-		return NULL;
-	}
-	usbmuxd_device_info_t *devinfo = (usbmuxd_device_info_t*)malloc(sizeof(usbmuxd_device_info_t));
-	if (!devinfo) {
-		DEBUG(1, "%s: Out of memory!\n", __func__);
-		return NULL;
-	}
-
-	devinfo->handle = dev->device_id;
-	devinfo->product_id = dev->product_id;
-	memset(devinfo->udid, '\0', sizeof(devinfo->udid));
-	memcpy(devinfo->udid, dev->serial_number, sizeof(devinfo->udid));
-
-	if (strlen(devinfo->udid) == 24) {
-		memmove(&devinfo->udid[9], &devinfo->udid[8], 17);
-		devinfo->udid[8] = '-';
-	}
-
-	if (strcasecmp(devinfo->udid, "ffffffffffffffffffffffffffffffffffffffff") == 0) {
-		sprintf(devinfo->udid + 32, "%08x", devinfo->handle);
-	}
-
-	return devinfo;
 }
 
 USBMUXD_API int usbmuxd_get_device_list(usbmuxd_device_info_t **device_list)
