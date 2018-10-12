@@ -854,6 +854,11 @@ static int get_next_event(int sfd, usbmuxd_event_cb_t callback, void *user_data)
 		memset(devinfo->udid, '\0', sizeof(devinfo->udid));
 		memcpy(devinfo->udid, dev->serial_number, sizeof(devinfo->udid));
 
+		if (strlen(devinfo->udid) == 24) {
+			memmove(&devinfo->udid[9], &devinfo->udid[8], 17);
+			devinfo->udid[8] = '-';
+		}
+
 		if (strcasecmp(devinfo->udid, "ffffffffffffffffffffffffffffffffffffffff") == 0) {
 			sprintf(devinfo->udid + 32, "%08x", devinfo->handle);
 		}
