@@ -1,8 +1,8 @@
 /*
  * usbmuxd.h - A client library to talk to the usbmuxd daemon.
  *
+ * Copyright (C) 2009-2018 Nikias Bassen <nikias@gmx.li>
  * Copyright (C) 2014 Martin Szulecki <m.szulecki@libimobiledevice.org>
- * Copyright (C) 2009 Nikias Bassen <nikias@gmx.li>
  * Copyright (C) 2009 Paul Sladen <libiphone@paul.sladen.org>
  *
  * This library is free software; you can redistribute it and/or modify
@@ -28,6 +28,19 @@
 extern "C" {
 #endif
 
+/** Device lookup options for usbmuxd_get_device. */
+enum usbmux_lookup_options {
+	DEVICE_LOOKUP_USBMUX = 1 << 1, /** include USBMUX devices during lookup */
+	DEVICE_LOOKUP_NETWORK = 1 << 2, /** include network devices during lookup */
+	DEVICE_LOOKUP_PREFER_NETWORK = 1 << 3 /** prefer network connection if device is available via USBMUX *and* network */
+};
+
+/** Type of connection a device is available on */
+enum usbmux_connection_type {
+	CONNECTION_TYPE_USB = 1,
+	CONNECTION_TYPE_NETWORK
+};
+
 /**
  * Device information structure holding data to identify the device.
  * The relevant 'handle' should be passed to 'usbmuxd_connect()', to
@@ -36,8 +49,10 @@ extern "C" {
  */
 typedef struct {
 	uint32_t handle;
-	int product_id;
-	char udid[41];
+	uint32_t product_id;
+	char udid[44];
+	enum usbmux_connection_type conn_type;
+	char conn_data[200];
 } usbmuxd_device_info_t;
 
 /**
@@ -104,7 +119,12 @@ int usbmuxd_get_device_list(usbmuxd_device_info_t **device_list);
 int usbmuxd_device_list_free(usbmuxd_device_info_t **device_list);
 
 /**
- * Gets device information for the device specified by udid.
+ * Looks up the device specified by UDID and returns device information.
+ *
+ * @note This function only considers devices connected through USB. To
+ *      query devices available via network, use usbmuxd_get_device().
+ *
+ * @see usbmuxd_get_device
  *
  * @param udid A device UDID of the device to look for. If udid is NULL,
  *      This function will return the first device found.
@@ -117,21 +137,47 @@ int usbmuxd_device_list_free(usbmuxd_device_info_t **device_list);
 int usbmuxd_get_device_by_udid(const char *udid, usbmuxd_device_info_t *device);
 
 /**
- * Request proxy connect to 
+ * Looks up the device specified by UDID with given options and returns
+ * device information.
  *
- * @param handle returned by 'usbmuxd_scan()'
+ * @param udid A device UDID of the device to look for. If udid is NULL,
+ *      this function will return the first device found.
+ * @param device Pointer to a previously allocated (or static)
+ *      usbmuxd_device_info_t that will be filled with the device info.
+ * @param options Specifying what device connection types should be
+ *      considered during lookup. Accepts bitwise or'ed values of
+ *      usbmux_lookup_options.
+ *      If 0 (no option) is specified it will default to DEVICE_LOOKUP_USBMUX.
+ *      To lookup both USB and network-connected devices, pass
+ *      DEVICE_LOOKUP_USBMUX | DEVICE_LOOKUP_NETWORK. If a device is available
+ *      both via USBMUX *and* network, it will select the USB connection.
+ *      This behavior can be changed by adding DEVICE_LOOKUP_PREFER_NETWORK
+ *      to the options in which case it will select the network connection.
+ *
+ * @see enum usbmux_lookup_options
+ *
+ * @return 0 if no matching device is connected, 1 if the device was found,
+ *    or a negative value on error.
+ */
+int usbmuxd_get_device(const char *udid, usbmuxd_device_info_t *device, enum usbmux_lookup_options options);
+
+/**
+ * Request proxy connection to the specified device and port.
+ *
+ * @param handle returned in the usbmux_device_info_t structure via
+ *      usbmuxd_get_device() or usbmuxd_get_device_list().
  *
  * @param tcp_port TCP port number on device, in range 0-65535.
  *	common values are 62078 for lockdown, and 22 for SSH.
  *
- * @return file descriptor socket of the connection, or -1 on error
+ * @return socket file descriptor of the connection, or -1 on error
  */
-int usbmuxd_connect(const int handle, const unsigned short tcp_port);
+int usbmuxd_connect(const uint32_t handle, const unsigned short tcp_port);
 
 /**
  * Disconnect. For now, this just closes the socket file descriptor.
  *
- * @param sfd socker file descriptor returned by usbmuxd_connect()
+ * @param sfd socket file descriptor returned by usbmuxd_connect()
  *
  * @return 0 on success, -1 on error.
  */

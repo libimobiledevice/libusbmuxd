@@ -66,7 +66,7 @@ AC_TYPE_UINT8_T
 # Checks for library functions.
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([strcasecmp strdup strerror strndup sleep])
+AC_CHECK_FUNCS([strcasecmp strdup strerror stpncpy sleep])
 
 # Check for operating system
 AC_MSG_CHECKING([whether we need platform-specific build settings])

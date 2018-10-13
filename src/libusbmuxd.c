@@ -1,8 +1,8 @@
 /*
  * libusbmuxd.c
  *
+ * Copyright (C) 2009-2018 Nikias Bassen <nikias@gmx.li>
  * Copyright (C) 2009-2014 Martin Szulecki <m.szulecki@libimobiledevice.org>
- * Copyright (C) 2009-2014 Nikias Bassen <nikias@gmx.li>
  * Copyright (C) 2009 Paul Sladen <libiphone@paul.sladen.org>
  *
  * This library is free software; you can redistribute it and/or
@@ -76,6 +76,16 @@ extern int _NSGetExecutablePath(char* buf, uint32_t* bufsize);
 #define USBMUXD_SOCKET_NAME "usbmuxd"
 #endif /* HAVE_INOTIFY */
 
+#ifndef HAVE_STPNCPY
+static char* stpncpy(char *dst, const char *src, size_t len)
+{
+	size_t n = strlen(src);
+	if (n > len)
+		n = len;
+	return strncpy(dst, src, len) + n;
+}
+#endif
+
 #include <plist/plist.h>
 #define PLIST_CLIENT_VERSION_STRING PACKAGE_STRING
 #define PLIST_LIBUSBMUX_VERSION 3
@@ -93,7 +103,11 @@ static char *prog_name = NULL;
 #include "collection.h"
 
 static int libusbmuxd_debug = 0;
-#define DEBUG(x, y, ...) if (x <= libusbmuxd_debug) fprintf(stderr, (y), __VA_ARGS__); fflush(stderr);
+#ifndef PACKAGE
+#define PACKAGE "libusbmuxd"
+#endif
+#define DEBUG(level, format, ...) if (level <= libusbmuxd_debug) fprintf(stderr, ("[" PACKAGE "] " format), __VA_ARGS__); fflush(stderr);
+#define ERROR(format, ...) DEBUG(0, format, __VA_ARGS__)
 
 static struct collection devices;
 static usbmuxd_event_cb_t event_cb = NULL;
@@ -136,45 +150,114 @@ static int connect_usbmuxd_socket()
 #endif
 }
 
-static struct usbmuxd_device_record* device_record_from_plist(plist_t props)
+static usbmuxd_device_info_t *device_info_from_plist(plist_t props)
 {
-	struct usbmuxd_device_record* dev = NULL;
+	usbmuxd_device_info_t* devinfo = NULL;
 	plist_t n = NULL;
 	uint64_t val = 0;
 	char *strval = NULL;
 
-	dev = (struct usbmuxd_device_record*)malloc(sizeof(struct usbmuxd_device_record));
-	if (!dev)
+	devinfo = (usbmuxd_device_info_t*)malloc(sizeof(usbmuxd_device_info_t));
+	if (!devinfo)
 		return NULL;
-	memset(dev, 0, sizeof(struct usbmuxd_device_record));
+	memset(devinfo, 0, sizeof(usbmuxd_device_info_t));
 
 	n = plist_dict_get_item(props, "DeviceID");
 	if (n && plist_get_node_type(n) == PLIST_UINT) {
 		plist_get_uint_val(n, &val);
-		dev->device_id = (uint32_t)val;
+		devinfo->handle = (uint32_t)val;
 	}
 
 	n = plist_dict_get_item(props, "ProductID");
 	if (n && plist_get_node_type(n) == PLIST_UINT) {
 		plist_get_uint_val(n, &val);
-		dev->product_id = (uint32_t)val;
+		devinfo->product_id = (uint32_t)val;
 	}
 
 	n = plist_dict_get_item(props, "SerialNumber");
 	if (n && plist_get_node_type(n) == PLIST_STRING) {
 		plist_get_string_val(n, &strval);
 		if (strval) {
-			strncpy(dev->serial_number, strval, 255);
+			char *t = stpncpy(devinfo->udid, strval, sizeof(devinfo->udid)-1);
+			*t = '\0';
+			if (strlen(devinfo->udid) == 24) {
+				memmove(&devinfo->udid[9], &devinfo->udid[8], 17);
+				devinfo->udid[8] = '-';
+			}
+			if (strcasecmp(devinfo->udid, "ffffffffffffffffffffffffffffffffffffffff") == 0) {
+				sprintf(devinfo->udid + 32, "%08x", devinfo->handle);
+			}
 			free(strval);
 		}
 	}
-	n = plist_dict_get_item(props, "LocationID");
-	if (n && plist_get_node_type(n) == PLIST_UINT) {
-		plist_get_uint_val(n, &val);
-		dev->location = (uint32_t)val;
+
+	n = plist_dict_get_item(props, "ConnectionType");
+	if (n && plist_get_node_type(n) == PLIST_STRING) {
+		plist_get_string_val(n, &strval);
+		if (strval) {
+			if (strcmp(strval, "USB") == 0) {
+				devinfo->conn_type = CONNECTION_TYPE_USB;
+			} else if (strcmp(strval, "Network") == 0) {
+				devinfo->conn_type = CONNECTION_TYPE_NETWORK;
+				n = plist_dict_get_item(props, "NetworkAddress");
+				if (n && plist_get_node_type(n) == PLIST_DATA) {
+					char *netaddr = NULL;
+					uint64_t addr_len = 0;
+					plist_get_data_val(n, &netaddr, &addr_len);
+					if (netaddr && addr_len > 0 && addr_len < sizeof(devinfo->conn_data)) {
+						memcpy(devinfo->conn_data, netaddr, addr_len);
+					}
+					free(netaddr);
+				}
+			} else {
+				ERROR("%s: Unexpected ConnectionType '%s'\n", __func__, strval);
+			}
+			free(strval);
+		}
 	}
 
-	return dev;
+	if (!devinfo->udid[0]) {
+		ERROR("%s: Failed to get SerialNumber (UDID)!\n", __func__);
+		free(devinfo);
+		devinfo = NULL;
+	}
+	if (!devinfo->conn_type) {
+		ERROR("%s: Failed to get ConnectionType!\n", __func__);
+		free(devinfo);
+		devinfo = NULL;
+	} else if (devinfo->conn_type == CONNECTION_TYPE_NETWORK && !devinfo->conn_data[0]) {
+		ERROR("%s: Failed to get EscapedFullServiceName!\n", __func__);
+		free(devinfo);
+		devinfo = NULL;
+	}
+
+	return devinfo;
+}
+
+static usbmuxd_device_info_t *device_info_from_device_record(struct usbmuxd_device_record *dev)
+{
+	if (!dev) {
+		return NULL;
+	}
+	usbmuxd_device_info_t *devinfo = (usbmuxd_device_info_t*)malloc(sizeof(usbmuxd_device_info_t));
+	if (!devinfo) {
+		ERROR("%s: Out of memory while allocating device info object\n", __func__);
+		return NULL;
+	}
+
+	devinfo->handle = dev->device_id;
+	devinfo->product_id = dev->product_id;
+	char *t = stpncpy(devinfo->udid, dev->serial_number, sizeof(devinfo->udid)-2);
+	*t = '\0';
+	if (strlen(devinfo->udid) == 24) {
+		memmove(&devinfo->udid[9], &devinfo->udid[8], 17);
+		devinfo->udid[8] = '-';
+	}
+	if (strcasecmp(devinfo->udid, "ffffffffffffffffffffffffffffffffffffffff") == 0) {
+		sprintf(devinfo->udid + 32, "%08x", devinfo->handle);
+	}
+
+	return devinfo;
 }
 
 static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload, int timeout)
@@ -249,7 +332,7 @@ static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload
 				hdr.message = MESSAGE_RESULT;
 			} else if (strcmp(message, "Attached") == 0) {
 				/* device add message */
-				struct usbmuxd_device_record *dev = NULL;
+				usbmuxd_device_info_t *devinfo = NULL;
 				plist_t props = plist_dict_get_item(plist, "Properties");
 				if (!props) {
 					DEBUG(1, "%s: Could not get properties for message '%s' from plist!\n", __func__, message);
@@ -258,15 +341,15 @@ static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload
 					return -EBADMSG;
 				}
 
-				dev = device_record_from_plist(props);
-				if (!dev) {
-					DEBUG(1, "%s: Could not create device record object from properties!\n", __func__);
+				devinfo = device_info_from_plist(props);
+				if (!devinfo) {
+					DEBUG(1, "%s: Could not create device info object from properties!\n", __func__);
 					free(message);
 					plist_free(plist);
 					return -EBADMSG;
 				}
-				*payload = (void*)dev;
-				hdr.length = sizeof(hdr) + sizeof(struct usbmuxd_device_record);
+				*payload = (void*)devinfo;
+				hdr.length = sizeof(hdr) + sizeof(usbmuxd_device_info_t);
 				hdr.message = MESSAGE_DEVICE_ADD;
 			} else if (strcmp(message, "Detached") == 0) {
 				/* device remove message */
@@ -305,6 +388,10 @@ static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload
 			free(message);
 		}
 		plist_free(plist);
+	} else if (hdr.message == MESSAGE_DEVICE_ADD) {
+		usbmuxd_device_info_t *devinfo = device_info_from_device_record((struct usbmuxd_device_record*)payload_loc);
+		free(payload_loc);
+		*payload = devinfo;
 	} else {
 		*payload = payload_loc;
 	}
@@ -535,11 +622,11 @@ static void get_prog_name()
 	size_t r = fread(tmpbuf, 1, 512, f);
 	if (r > 0) {
 		char *p = tmpbuf;
-		while ((p-tmpbuf < (ssize_t)r) && (*p != '(') && (*p != '\0')) p++;
+		while ((p-tmpbuf < r) && (*p != '(') && (*p != '\0')) p++;
 		if (*p == '(') {
 			p++;
 			char *pname = p;
-			while ((p-tmpbuf < (ssize_t)r) && (*p != ')') && (*p != '\0')) p++;
+			while ((p-tmpbuf < r) && (*p != ')') && (*p != '\0')) p++;
 			if (*p == ')') {
 				*p = '\0';
 				prog_name = strdup(pname);
@@ -841,30 +928,10 @@ static int get_next_event(int sfd, usbmuxd_event_cb_t callback, void *user_data)
 	}
 
 	if (hdr.message == MESSAGE_DEVICE_ADD) {
-		struct usbmuxd_device_record *dev = payload;
-		usbmuxd_device_info_t *devinfo = (usbmuxd_device_info_t*)malloc(sizeof(usbmuxd_device_info_t));
-		if (!devinfo) {
-			DEBUG(1, "%s: Out of memory!\n", __func__);
-			free(payload);
-			return -1;
-		}
-
-		devinfo->handle = dev->device_id;
-		devinfo->product_id = dev->product_id;
-		memset(devinfo->udid, '\0', sizeof(devinfo->udid));
-		memcpy(devinfo->udid, dev->serial_number, sizeof(devinfo->udid));
-
-		if (strlen(devinfo->udid) == 24) {
-			memmove(&devinfo->udid[9], &devinfo->udid[8], 17);
-			devinfo->udid[8] = '-';
-		}
-
-		if (strcasecmp(devinfo->udid, "ffffffffffffffffffffffffffffffffffffffff") == 0) {
-			sprintf(devinfo->udid + 32, "%08x", devinfo->handle);
-		}
-
+		usbmuxd_device_info_t *devinfo = (usbmuxd_device_info_t*)payload;
 		collection_add(&devices, devinfo);
 		generate_event(callback, devinfo, UE_DEVICE_ADD, user_data);
+		payload = NULL;
 	} else if (hdr.message == MESSAGE_DEVICE_REMOVE) {
 		uint32_t handle;
 		usbmuxd_device_info_t *devinfo;
@@ -1000,34 +1067,6 @@ USBMUXD_API int usbmuxd_unsubscribe()
 	return 0;
 }
 
-static usbmuxd_device_info_t *device_info_from_device_record(struct usbmuxd_device_record *dev)
-{
-	if (!dev) {
-		return NULL;
-	}
-	usbmuxd_device_info_t *devinfo = (usbmuxd_device_info_t*)malloc(sizeof(usbmuxd_device_info_t));
-	if (!devinfo) {
-		DEBUG(1, "%s: Out of memory!\n", __func__);
-		return NULL;
-	}
-
-	devinfo->handle = dev->device_id;
-	devinfo->product_id = dev->product_id;
-	memset(devinfo->udid, '\0', sizeof(devinfo->udid));
-	memcpy(devinfo->udid, dev->serial_number, sizeof(devinfo->udid));
-
-	if (strlen(devinfo->udid) == 24) {
-		memmove(&devinfo->udid[9], &devinfo->udid[8], 17);
-		devinfo->udid[8] = '-';
-	}
-
-	if (strcasecmp(devinfo->udid, "ffffffffffffffffffffffffffffffffffffffff") == 0) {
-		sprintf(devinfo->udid + 32, "%08x", devinfo->handle);
-	}
-
-	return devinfo;
-}
-
 USBMUXD_API int usbmuxd_get_device_list(usbmuxd_device_info_t **device_list)
 {
 	int sfd;
@@ -1037,7 +1076,6 @@ USBMUXD_API int usbmuxd_get_device_list(usbmuxd_device_info_t **device_list)
 	struct collection tmpdevs;
 	usbmuxd_device_info_t *newlist = NULL;
 	struct usbmuxd_header hdr;
-	struct usbmuxd_device_record *dev;
 	int dev_cnt = 0;
 	void *payload = NULL;
 
@@ -1063,12 +1101,10 @@ retry:
 					for (i = 0; i < numdevs; i++) {
 						plist_t pdev = plist_array_get_item(devlist, i);
 						plist_t props = plist_dict_get_item(pdev, "Properties");
-						dev = device_record_from_plist(props);
-						usbmuxd_device_info_t *devinfo = device_info_from_device_record(dev);
-						free(dev);
+						usbmuxd_device_info_t *devinfo = device_info_from_plist(props);
 						if (!devinfo) {
 							socket_close(sfd);
-							DEBUG(1, "%s: can't create device info object\n", __func__);
+							DEBUG(1, "%s: Could not create device info object from properties!\n", __func__);
 							plist_free(list);
 							return -1;
 						}
@@ -1119,17 +1155,9 @@ retry:
 	while (1) {
 		if (receive_packet(sfd, &hdr, &payload, 100) > 0) {
 			if (hdr.message == MESSAGE_DEVICE_ADD) {
-				dev = payload;
-
-				usbmuxd_device_info_t *devinfo = device_info_from_device_record(dev);
-				if (!devinfo) {
-					socket_close(sfd);
-					DEBUG(1, "%s: can't create device info object\n", __func__);
-					free(payload);
-					return -1;
-				}
+				usbmuxd_device_info_t *devinfo = payload;
 				collection_add(&tmpdevs, devinfo);
-
+				payload = NULL;
 			} else if (hdr.message == MESSAGE_DEVICE_REMOVE) {
 				uint32_t handle;
 				usbmuxd_device_info_t *devinfo = NULL;
@@ -1192,6 +1220,9 @@ USBMUXD_API int usbmuxd_device_list_free(usbmuxd_device_info_t **device_list)
 USBMUXD_API int usbmuxd_get_device_by_udid(const char *udid, usbmuxd_device_info_t *device)
 {
 	usbmuxd_device_info_t *dev_list = NULL;
+	usbmuxd_device_info_t *dev = NULL;
+	int result = 0;
+	int i;
 
 	if (!device) {
 		return -EINVAL;
@@ -1200,23 +1231,92 @@ USBMUXD_API int usbmuxd_get_device_by_udid(const char *udid, usbmuxd_device_info
 		return -ENODEV;
 	}
 
-	int i;
-	int result = 0;
 	for (i = 0; dev_list[i].handle > 0; i++) {
 	 	if (!udid) {
-			device->handle = dev_list[i].handle;
-			device->product_id = dev_list[i].product_id;
-			strcpy(device->udid, dev_list[i].udid);
-			result = 1;
+			if (dev_list[i].conn_type == CONNECTION_TYPE_USB) {
+				dev = &dev_list[i];
+				break;
+			}
+		} else if (!strcmp(udid, dev_list[i].udid)) {
+			if (dev_list[i].conn_type == CONNECTION_TYPE_USB) {
+				dev = &dev_list[i];
+				break;
+			}
+		}
+	}
+
+	if (dev) {
+		device->handle = dev->handle;
+		device->product_id = dev->product_id;
+		char *t = stpncpy(device->udid, dev->udid, sizeof(device->udid)-1);
+		*t = '\0';
+		device->conn_type = dev->conn_type;
+		memcpy(device->conn_data, dev->conn_data, sizeof(device->conn_data));
+		result = 1;
+	}
+
+	usbmuxd_device_list_free(&dev_list);
+
+	return result;
+}
+
+USBMUXD_API int usbmuxd_get_device(const char *udid, usbmuxd_device_info_t *device, enum usbmux_lookup_options options)
+{
+	usbmuxd_device_info_t *dev_list = NULL;
+	usbmuxd_device_info_t *dev_network = NULL;
+	usbmuxd_device_info_t *dev_usbmuxd = NULL;
+	usbmuxd_device_info_t *dev = NULL;
+	int result = 0;
+	int i;
+
+	if (!device) {
+		return -EINVAL;
+	}
+	if (usbmuxd_get_device_list(&dev_list) < 0) {
+		return -ENODEV;
+	}
+
+	if (options == 0) {
+		options = DEVICE_LOOKUP_USBMUX;
+	}
+
+	for (i = 0; dev_list[i].handle > 0; i++) {
+		if (!udid) {
+			if ((options & DEVICE_LOOKUP_USBMUX) && (dev_list[i].conn_type == CONNECTION_TYPE_USB)) {
+				dev_usbmuxd = &dev_list[i];
+				break;
+			} else if ((options & DEVICE_LOOKUP_NETWORK) && (dev_list[i].conn_type == CONNECTION_TYPE_NETWORK)) {
+				dev_network = &dev_list[i];
+				break;
+			}
+		} else if (!strcmp(udid, dev_list[i].udid)) {
+			if ((options & DEVICE_LOOKUP_USBMUX) && (dev_list[i].conn_type == CONNECTION_TYPE_USB)) {
+				dev_usbmuxd = &dev_list[i];
+			} else if ((options & DEVICE_LOOKUP_NETWORK) && (dev_list[i].conn_type == CONNECTION_TYPE_NETWORK)) {
+				dev_network = &dev_list[i];
+			}
+		}
+		if (dev_usbmuxd && dev_network) {
 			break;
 		}
-		if (!strcmp(udid, dev_list[i].udid)) {
-			device->handle = dev_list[i].handle;
-			device->product_id = dev_list[i].product_id;
-			strcpy(device->udid, dev_list[i].udid);
-			result = 1;
-			break;
-		}
+	}
+
+	if (dev_network && dev_usbmuxd) {
+		dev = (options & DEVICE_LOOKUP_PREFER_NETWORK) ? dev_network : dev_usbmuxd;
+	} else if (dev_network) {
+		dev = dev_network;
+	} else if (dev_usbmuxd) {
+		dev = dev_usbmuxd;
+	}
+
+	if (dev) {
+		device->handle = dev->handle;
+		device->product_id = dev->product_id;
+		char *t = stpncpy(device->udid, dev->udid, sizeof(device->udid)-1);
+		*t = '\0';
+		device->conn_type = dev->conn_type;
+		memcpy(device->conn_data, dev->conn_data, sizeof(device->conn_data));
+		result = 1;
 	}
 
 	free(dev_list);
@@ -1224,7 +1324,7 @@ USBMUXD_API int usbmuxd_get_device_by_udid(const char *udid, usbmuxd_device_info
 	return result;
 }
 
-USBMUXD_API int usbmuxd_connect(const int handle, const unsigned short port)
+USBMUXD_API int usbmuxd_connect(const uint32_t handle, const unsigned short port)
 {
 	int sfd;
 	int tag;
