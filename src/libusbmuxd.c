@@ -143,6 +143,50 @@ static usbmuxd_device_info_t *devices_find(uint32_t handle)
  */
 static int connect_usbmuxd_socket()
 {
+	char *usbmuxd_socket_addr = getenv("USBMUXD_SOCKET_ADDRESS");
+	if (usbmuxd_socket_addr) {
+		if (strncmp(usbmuxd_socket_addr, "UNIX:", 5) == 0) {
+#if defined(WIN32) || defined(__CYGWIN__)
+			/* not supported, ignore */
+#else
+			if (usbmuxd_socket_addr[5] != '\0') {
+				return socket_connect_unix(usbmuxd_socket_addr+5);
+			}
+#endif
+		} else {
+			uint16_t port = 0;
+			char *p = strrchr(usbmuxd_socket_addr, ':');
+			if (p) {
+				char *endp = NULL;
+				long l_port = strtol(p+1, &endp, 10);
+				if (endp && *endp == '\0') {
+					if (l_port > 0 && l_port < 65536) {
+						port = (uint16_t)l_port;
+					}
+				}
+			}
+			if (p && port > 0) {
+				char *connect_addr = NULL;
+				if (usbmuxd_socket_addr[0] == '[') {
+					connect_addr = strdup(usbmuxd_socket_addr+1);
+					connect_addr[p - usbmuxd_socket_addr - 1] = '\0';
+					p = strrchr(connect_addr, ']');
+					if (p) {
+						*p = '\0';
+					}
+				} else {
+					connect_addr = strdup(usbmuxd_socket_addr);
+					connect_addr[p - usbmuxd_socket_addr] = '\0';
+				}
+				if (connect_addr && *connect_addr != '\0') {
+					int res = socket_connect(connect_addr, port);
+					free(connect_addr);
+					return res;
+				}
+				free(connect_addr);
+			}
+		}
+	}
 #if defined(WIN32) || defined(__CYGWIN__)
 	return socket_connect("127.0.0.1", USBMUXD_SOCKET_PORT);
 #else
