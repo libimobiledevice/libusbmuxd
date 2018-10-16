@@ -194,6 +194,19 @@ static int connect_usbmuxd_socket()
 #endif
 }
 
+static void sanitize_udid(usbmuxd_device_info_t *devinfo)
+{
+	if (!devinfo)
+		return;
+	if (strlen(devinfo->udid) == 24) {
+		memmove(&devinfo->udid[9], &devinfo->udid[8], 17);
+		devinfo->udid[8] = '-';
+	}
+	if (strcasecmp(devinfo->udid, "ffffffffffffffffffffffffffffffffffffffff") == 0) {
+		sprintf(devinfo->udid + 32, "%08x", devinfo->handle);
+	}
+}
+
 static usbmuxd_device_info_t *device_info_from_plist(plist_t props)
 {
 	usbmuxd_device_info_t* devinfo = NULL;
@@ -224,13 +237,7 @@ static usbmuxd_device_info_t *device_info_from_plist(plist_t props)
 		if (strval) {
 			char *t = stpncpy(devinfo->udid, strval, sizeof(devinfo->udid)-1);
 			*t = '\0';
-			if (strlen(devinfo->udid) == 24) {
-				memmove(&devinfo->udid[9], &devinfo->udid[8], 17);
-				devinfo->udid[8] = '-';
-			}
-			if (strcasecmp(devinfo->udid, "ffffffffffffffffffffffffffffffffffffffff") == 0) {
-				sprintf(devinfo->udid + 32, "%08x", devinfo->handle);
-			}
+			sanitize_udid(devinfo);
 			free(strval);
 		}
 	}
@@ -293,13 +300,7 @@ static usbmuxd_device_info_t *device_info_from_device_record(struct usbmuxd_devi
 	devinfo->product_id = dev->product_id;
 	char *t = stpncpy(devinfo->udid, dev->serial_number, sizeof(devinfo->udid)-2);
 	*t = '\0';
-	if (strlen(devinfo->udid) == 24) {
-		memmove(&devinfo->udid[9], &devinfo->udid[8], 17);
-		devinfo->udid[8] = '-';
-	}
-	if (strcasecmp(devinfo->udid, "ffffffffffffffffffffffffffffffffffffffff") == 0) {
-		sprintf(devinfo->udid + 32, "%08x", devinfo->handle);
-	}
+	sanitize_udid(devinfo);
 
 	return devinfo;
 }
