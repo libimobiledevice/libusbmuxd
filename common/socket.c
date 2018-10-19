@@ -307,7 +307,7 @@ int socket_connect(const char *addr, uint16_t port)
 				}
 			}
 		}
-		close(sfd);
+		socket_close(sfd);
 	}
 
 	freeaddrinfo(result);
