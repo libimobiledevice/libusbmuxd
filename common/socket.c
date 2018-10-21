@@ -272,7 +272,7 @@ int socket_connect(const char *addr, uint16_t port)
 
 		if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, (void*)&yes, sizeof(int)) == -1) {
 			perror("setsockopt()");
-			close(sfd);
+			socket_close(sfd);
 			continue;
 		}
 
