@@ -170,7 +170,8 @@ int usbmuxd_get_device(const char *udid, usbmuxd_device_info_t *device, enum usb
  * @param tcp_port TCP port number on device, in range 0-65535.
  *	common values are 62078 for lockdown, and 22 for SSH.
  *
- * @return socket file descriptor of the connection, or -1 on error
+ * @return socket file descriptor of the connection, or a negative errno
+ *    value on error.
  */
 int usbmuxd_connect(const uint32_t handle, const unsigned short tcp_port);
 

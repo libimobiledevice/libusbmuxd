@@ -1374,14 +1374,14 @@ USBMUXD_API int usbmuxd_connect(const uint32_t handle, const unsigned short port
 	int sfd;
 	int tag;
 	int connected = 0;
-	uint32_t res = -1;
+	int result = EBADF;
 
 retry:
 	sfd = connect_usbmuxd_socket();
 	if (sfd < 0) {
-		LIBUSBMUXD_DEBUG(1, "%s: Error: Connection to usbmuxd failed: %s\n",
-				__func__, strerror(errno));
-		return sfd;
+		result = errno;
+		LIBUSBMUXD_DEBUG(1, "%s: Error: Connection to usbmuxd failed: %s\n", __func__, strerror(result));
+		return -result;
 	}
 
 	tag = ++use_tag;
@@ -1389,6 +1389,7 @@ retry:
 		LIBUSBMUXD_DEBUG(1, "%s: Error sending connect message!\n", __func__);
 	} else {
 		// read ACK
+		uint32_t res = -1;
 		LIBUSBMUXD_DEBUG(2, "%s: Reading connect result...\n", __func__);
 		if (usbmuxd_get_result(sfd, tag, &res, NULL) == 1) {
 			if (res == 0) {
@@ -1401,6 +1402,13 @@ retry:
 					goto retry;
 				}
 				LIBUSBMUXD_DEBUG(1, "%s: Connect failed, Error code=%d\n", __func__, res);
+				if (res == RESULT_CONNREFUSED) {
+					result = ECONNREFUSED;
+				} else if (res == RESULT_BADDEV) {
+					result = ENODEV;
+				} else {
+					result = EBADF;
+				}
 			}
 		}
 	}
@@ -1411,7 +1419,7 @@ retry:
 
 	socket_close(sfd);
 
-	return -1;
+	return -result;
 }
 
 USBMUXD_API int usbmuxd_disconnect(int sfd)
