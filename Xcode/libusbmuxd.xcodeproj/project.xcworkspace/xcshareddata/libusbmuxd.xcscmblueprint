@@ -1,0 +1,30 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "97DEBE5E75882055095471C30476BE04A8F57925",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "F12AAB142D225A23A20B5B62D5F1B3376BB3038D" : 0,
+    "97DEBE5E75882055095471C30476BE04A8F57925" : 0
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "1E2E28E7-1C75-4EE9-A8E6-E59F4FA8874E",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "F12AAB142D225A23A20B5B62D5F1B3376BB3038D" : "libplist\/",
+    "97DEBE5E75882055095471C30476BE04A8F57925" : "libusbmuxd\/"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "libusbmuxd",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "Xcode\/libusbmuxd.xcodeproj",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/github.com\/lunzii\/libusbmuxd.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "97DEBE5E75882055095471C30476BE04A8F57925"
+    },
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/github.com\/lunzii\/libplist.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "F12AAB142D225A23A20B5B62D5F1B3376BB3038D"
+    }
+  ]
+}

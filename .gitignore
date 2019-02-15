@@ -8,14 +8,12 @@
 *.lo
 *.la
 autom4te.cache/*
-*.in
 */.deps/*
 m4/*
 swig/*
 *.swp
 *.patch
 aclocal.m4
-config.h
 config.log
 config.sub
 config.guess
@@ -37,3 +35,4 @@ docs/html
 libusbmuxd.pc
 tools/.libs/*
 tools/iproxy
+.DS_Store
