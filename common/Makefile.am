@@ -5,8 +5,10 @@ noinst_LTLIBRARIES = libinternalcommon.la
 libinternalcommon_la_LIBADD =
 libinternalcommon_la_SOURCES =			\
 	socket.c				\
+	thread.c				\
 	collection.c				\
 	socket.h				\
+	thread.h				\
 	collection.h
 
 if WIN32

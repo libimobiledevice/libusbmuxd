@@ -104,6 +104,8 @@ static char *prog_name = NULL;
 #include "socket.h"
 // misc utility functions
 #include "collection.h"
+// threads
+#include "thread.h"
 
 static int libusbmuxd_debug = 0;
 #ifndef PACKAGE
@@ -114,11 +116,7 @@ static int libusbmuxd_debug = 0;
 
 static struct collection devices;
 static usbmuxd_event_cb_t event_cb = NULL;
-#ifdef WIN32
-HANDLE devmon = NULL;
-#else
-pthread_t devmon;
-#endif
+static THREAD_T devmon = THREAD_T_NULL;
 static int listenfd = -1;
 
 static volatile int use_tag = 0;
@@ -1036,8 +1034,8 @@ static void *device_monitor(void *data)
 {
 	collection_init(&devices);
 
-#ifndef WIN32
-	pthread_cleanup_push(device_monitor_cleanup, NULL);
+#ifdef HAVE_THREAD_CLEANUP
+	thread_cleanup_push(device_monitor_cleanup, NULL);
 #endif
 	while (event_cb) {
 
@@ -1054,8 +1052,8 @@ static void *device_monitor(void *data)
 		}
 	}
 
-#ifndef WIN32
-	pthread_cleanup_pop(1);
+#ifdef HAVE_THREAD_CLEANUP
+	thread_cleanup_pop(1);
 #else
 	device_monitor_cleanup(NULL);
 #endif
@@ -1071,15 +1069,7 @@ USBMUXD_API int usbmuxd_subscribe(usbmuxd_event_cb_t callback, void *user_data)
 	}
 	event_cb = callback;
 
-#ifdef WIN32
-	res = 0;
-	devmon = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)device_monitor, user_data, 0, NULL);
-	if (devmon == NULL) {
-		res = GetLastError();
-	}
-#else
-	res = pthread_create(&devmon, NULL, device_monitor, user_data);
-#endif
+	res = thread_new(&devmon, device_monitor, user_data);
 	if (res != 0) {
 		LIBUSBMUXD_DEBUG(1, "%s: ERROR: Could not start device watcher thread!\n", __func__);
 		return res;
@@ -1089,28 +1079,19 @@ USBMUXD_API int usbmuxd_subscribe(usbmuxd_event_cb_t callback, void *user_data)
 
 USBMUXD_API int usbmuxd_unsubscribe()
 {
-	int res;
+	int res = 0;
 	event_cb = NULL;
 
 	socket_shutdown(listenfd, SHUT_RDWR);
 
-#ifdef WIN32
-	if (devmon != NULL) {
-		res = WaitForSingleObject(devmon, INFINITE);
-		if (res != 0) {
-			return res;
-		}
-	}
-#else
-	res = pthread_kill(devmon, 0);
-	if (res == 0) {
-		pthread_cancel(devmon);
-		res = pthread_join(devmon, NULL);
+	if (thread_alive(devmon)) {
+		thread_cancel(devmon);
+		res = thread_join(devmon);
+		thread_free(devmon);
 	}
 	if ((res != 0) && (res != ESRCH)) {
 		return res;
 	}
-#endif
 
 	return 0;
 }

@@ -69,20 +69,22 @@ AC_FUNC_REALLOC
 AC_CHECK_FUNCS([strcasecmp strdup strerror stpncpy sleep])
 
 # Check for operating system
-AC_MSG_CHECKING([whether we need platform-specific build settings])
+AC_MSG_CHECKING([for platform-specific build settings])
 case ${host_os} in
   *mingw32*|*cygwin*)
-    AC_MSG_RESULT([yes])
+    AC_MSG_RESULT([${host_os}])
     win32=true
     AC_DEFINE(WINVER, 0x0501, [minimum Windows version])
     ;;
   darwin*)
-    AC_MSG_RESULT([no])
+    AC_MSG_RESULT([${host_os}])
+    AX_PTHREAD([], [AC_MSG_ERROR([pthread is required to build $PACKAGE])])
+    AC_CHECK_FUNCS([pthread_cancel])
     ;;
   *)
-    AC_MSG_RESULT([yes])
-    AX_PTHREAD([], [AC_MSG_ERROR([pthread is required to build libusbmuxd])])
-    AC_CHECK_LIB(pthread, [pthread_create, pthread_mutex_lock], [], [AC_MSG_ERROR([pthread is required to build libusbmuxd])])
+    AC_MSG_RESULT([${host_os}])
+    AX_PTHREAD([], [AC_MSG_ERROR([pthread is required to build $PACKAGE])])
+    AC_CHECK_FUNCS([pthread_cancel])
     AC_CACHE_CHECK(for program_invocation_short_name, ac_cv_program_invocation_short_name,[
         AC_TRY_LINK([extern char* program_invocation_short_name;],[return program_invocation_short_name;],
             [ac_cv_program_invocation_short_name=yes],
@@ -105,7 +107,7 @@ case ${host_os} in
 esac
 AM_CONDITIONAL(WIN32, test x$win32 = xtrue)
 
-AS_COMPILER_FLAGS(GLOBAL_CFLAGS, "-Wall -Wextra -Wmissing-declarations -Wredundant-decls -Wshadow -Wpointer-arith  -Wwrite-strings -Wswitch-default -Wno-unused-parameter -fvisibility=hidden $PTHREAD_CFLAGS")
+AS_COMPILER_FLAGS(GLOBAL_CFLAGS, "-Wall -Wextra -Wmissing-declarations -Wredundant-decls -Wshadow -Wpointer-arith -Wwrite-strings -Wswitch-default -Wno-unused-parameter -fvisibility=hidden $PTHREAD_CFLAGS")
 GLOBAL_LDFLAGS="$PTHREAD_LIBS"
 AC_SUBST(GLOBAL_CFLAGS)
 AC_SUBST(GLOBAL_LDFLAGS)
