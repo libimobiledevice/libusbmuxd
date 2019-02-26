@@ -45,6 +45,9 @@
 #ifndef EBADMSG
 #define EBADMSG 104
 #endif
+#ifndef ECONNREFUSED
+#define ECONNREFUSED 107
+#endif
 
 #include <unistd.h>
 #include <signal.h>
