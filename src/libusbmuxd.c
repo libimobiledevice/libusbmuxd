@@ -271,7 +271,7 @@ static usbmuxd_device_info_t *device_info_from_plist(plist_t props)
 	if (!devinfo->udid[0]) {
 		LIBUSBMUXD_ERROR("%s: Failed to get SerialNumber (UDID)!\n", __func__);
 		free(devinfo);
-		devinfo = NULL;
+		return NULL;
 	}
 	if (!devinfo->conn_type) {
 		LIBUSBMUXD_ERROR("%s: Failed to get ConnectionType!\n", __func__);
