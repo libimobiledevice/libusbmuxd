@@ -365,17 +365,16 @@ int socket_check_fd(int fd, fd_mode fdm, unsigned int timeout)
 	FD_ZERO(&fds);
 	FD_SET(fd, &fds);
 
-	if (timeout > 0) {
-		to.tv_sec = (time_t) (timeout / 1000);
-		to.tv_usec = (time_t) ((timeout - (to.tv_sec * 1000)) * 1000);
-		pto = &to;
-	} else {
-		pto = NULL;
-	}
-
 	sret = -1;
 
 	do {
+		if (timeout > 0) {
+			to.tv_sec = (time_t) (timeout / 1000);
+			to.tv_usec = (time_t) ((timeout - (to.tv_sec * 1000)) * 1000);
+			pto = &to;
+		} else {
+			pto = NULL;
+		}
 		eagain = 0;
 		switch (fdm) {
 		case FDM_READ:
