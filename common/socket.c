@@ -49,6 +49,10 @@ static int wsa_init = 0;
 #define RECV_TIMEOUT 20000
 #define CONNECT_TIMEOUT 5000
 
+#ifndef ECONNRESET
+#define ECONNRESET 108
+#endif
+
 static int verbose = 0;
 
 void socket_set_verbose(int level)
@@ -475,7 +479,7 @@ int socket_receive_timeout(int fd, void *data, size_t length, int flags,
 		// but this is an error condition
 		if (verbose >= 3)
 			fprintf(stderr, "%s: fd=%d recv returned 0\n", __func__, fd);
-		return -EAGAIN;
+		return -ECONNRESET;
 	}
 	if (result < 0) {
 		return -errno;
