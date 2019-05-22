@@ -1155,6 +1155,14 @@ USBMUXD_API int usbmuxd_events_unsubscribe(usbmuxd_subscription_context_t ctx)
 
 	mutex_lock(&listener_mutex);
 	if (collection_remove(&listeners, ctx) == 0) {
+		FOREACH(usbmuxd_device_info_t *dev, &devices) {
+			if (dev) {
+				usbmuxd_event_t ev;
+				ev.event = UE_DEVICE_REMOVE;
+				memcpy(&ev.device, dev, sizeof(usbmuxd_device_info_t));
+				(ctx)->callback(&ev, (ctx)->user_data);
+			}
+		} ENDFOREACH
 		free(ctx);
 	}
 	num = collection_count(&listeners);
