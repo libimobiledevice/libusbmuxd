@@ -57,16 +57,17 @@ void collection_add(struct collection *col, void *element)
 	col->capacity *= 2;
 }
 
-void collection_remove(struct collection *col, void *element)
+int collection_remove(struct collection *col, void *element)
 {
 	int i;
 	for(i=0; i<col->capacity; i++) {
 		if(col->list[i] == element) {
 			col->list[i] = NULL;
-			return;
+			return 0;
 		}
 	}
 	fprintf(stderr, "%s: WARNING: element %p not present in collection %p (cap %d)", __func__, element, col, col->capacity);
+	return -1;
 }
 
 int collection_count(struct collection *col)

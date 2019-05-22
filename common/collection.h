@@ -29,7 +29,7 @@ struct collection {
 
 void collection_init(struct collection *col);
 void collection_add(struct collection *col, void *element);
-void collection_remove(struct collection *col, void *element);
+int collection_remove(struct collection *col, void *element);
 int collection_count(struct collection *col);
 void collection_free(struct collection *col);
 

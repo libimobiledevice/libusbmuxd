@@ -1,7 +1,7 @@
 /*
  * libusbmuxd.c
  *
- * Copyright (C) 2009-2018 Nikias Bassen <nikias@gmx.li>
+ * Copyright (C) 2009-2019 Nikias Bassen <nikias@gmx.li>
  * Copyright (C) 2009-2014 Martin Szulecki <m.szulecki@libimobiledevice.org>
  * Copyright (C) 2009 Paul Sladen <libiphone@paul.sladen.org>
  *
@@ -115,13 +115,24 @@ static int libusbmuxd_debug = 0;
 #define LIBUSBMUXD_ERROR(format, ...) LIBUSBMUXD_DEBUG(0, format, __VA_ARGS__)
 
 static struct collection devices;
-static usbmuxd_event_cb_t event_cb = NULL;
 static THREAD_T devmon = THREAD_T_NULL;
 static int listenfd = -1;
+static int cancelling = 0;
 
 static volatile int use_tag = 0;
 static volatile int proto_version = 1;
 static volatile int try_list_devices = 1;
+
+struct usbmuxd_subscription_context {
+	usbmuxd_event_cb_t callback;
+	void *user_data;
+};
+
+static struct usbmuxd_subscription_context *event_ctx = NULL;
+
+static struct collection listeners;
+thread_once_t listener_init_once = THREAD_ONCE_INIT;
+mutex_t listener_mutex;
 
 /**
  * Finds a device info record by its handle.
@@ -319,7 +330,9 @@ static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload
 
 	recv_len = socket_receive_timeout(sfd, &hdr, sizeof(hdr), 0, timeout);
 	if (recv_len < 0) {
-		LIBUSBMUXD_DEBUG(1, "%s: Error receiving packet: %d\n", __func__, recv_len);
+		if (!cancelling) {
+			LIBUSBMUXD_DEBUG(1, "%s: Error receiving packet: %s\n", __func__, strerror(-recv_len));
+		}
 		return recv_len;
 	} else if ((size_t)recv_len < sizeof(hdr)) {
 		LIBUSBMUXD_DEBUG(1, "%s: Received packet is too small, got %d bytes!\n", __func__, recv_len);
@@ -802,18 +815,22 @@ static int send_pair_record_packet(int sfd, uint32_t tag, const char* msgtype, c
  * A reference to a populated usbmuxd_event_t with information about the event
  * and the corresponding device will be passed to the callback function.
  */
-static void generate_event(usbmuxd_event_cb_t callback, const usbmuxd_device_info_t *dev, enum usbmuxd_event_type event, void *user_data)
+static void generate_event(const usbmuxd_device_info_t *dev, enum usbmuxd_event_type event)
 {
 	usbmuxd_event_t ev;
 
-	if (!callback || !dev) {
+	if (!dev) {
 		return;
 	}
 
 	ev.event = event;
 	memcpy(&ev.device, dev, sizeof(usbmuxd_device_info_t));
 
-	callback(&ev, user_data);
+	mutex_lock(&listener_mutex);
+	FOREACH(struct usbmuxd_subscription_context* context, &listeners) {
+		context->callback(&ev, context->user_data);
+	} ENDFOREACH
+	mutex_unlock(&listener_mutex);
 }
 
 static int usbmuxd_listen_poll()
@@ -822,7 +839,13 @@ static int usbmuxd_listen_poll()
 
 	sfd = connect_usbmuxd_socket();
 	if (sfd < 0) {
-		while (event_cb) {
+		while (1) {
+			mutex_lock(&listener_mutex);
+			int num = collection_count(&listeners);
+			mutex_unlock(&listener_mutex);
+			if (num <= 0) {
+				break;
+			}
 			if ((sfd = connect_usbmuxd_socket()) >= 0) {
 				break;
 			}
@@ -949,19 +972,21 @@ retry:
  * Waits for an event to occur, i.e. a packet coming from usbmuxd.
  * Calls generate_event to pass the event via callback to the client program.
  */
-static int get_next_event(int sfd, usbmuxd_event_cb_t callback, void *user_data)
+static int get_next_event(int sfd)
 {
 	struct usbmuxd_header hdr;
 	void *payload = NULL;
 
 	/* block until we receive something */
 	if (receive_packet(sfd, &hdr, &payload, 0) < 0) {
-		LIBUSBMUXD_DEBUG(1, "%s: Error in usbmuxd connection, disconnecting all devices!\n", __func__);
+		if (!cancelling) {
+			LIBUSBMUXD_DEBUG(1, "%s: Error in usbmuxd connection, disconnecting all devices!\n", __func__);
+		}
 		// when then usbmuxd connection fails,
 		// generate remove events for every device that
 		// is still present so applications know about it
 		FOREACH(usbmuxd_device_info_t *dev, &devices) {
-			generate_event(callback, dev, UE_DEVICE_REMOVE, user_data);
+			generate_event(dev, UE_DEVICE_REMOVE);
 			collection_remove(&devices, dev);
 			free(dev);
 		} ENDFOREACH
@@ -976,7 +1001,7 @@ static int get_next_event(int sfd, usbmuxd_event_cb_t callback, void *user_data)
 	if (hdr.message == MESSAGE_DEVICE_ADD) {
 		usbmuxd_device_info_t *devinfo = (usbmuxd_device_info_t*)payload;
 		collection_add(&devices, devinfo);
-		generate_event(callback, devinfo, UE_DEVICE_ADD, user_data);
+		generate_event(devinfo, UE_DEVICE_ADD);
 		payload = NULL;
 	} else if (hdr.message == MESSAGE_DEVICE_REMOVE) {
 		uint32_t handle;
@@ -988,7 +1013,7 @@ static int get_next_event(int sfd, usbmuxd_event_cb_t callback, void *user_data)
 		if (!devinfo) {
 			LIBUSBMUXD_DEBUG(1, "%s: WARNING: got device remove message for handle %d, but couldn't find the corresponding handle in the device list. This event will be ignored.\n", __func__, handle);
 		} else {
-			generate_event(callback, devinfo, UE_DEVICE_REMOVE, user_data);
+			generate_event(devinfo, UE_DEVICE_REMOVE);
 			collection_remove(&devices, devinfo);
 			free(devinfo);
 		}
@@ -1002,7 +1027,7 @@ static int get_next_event(int sfd, usbmuxd_event_cb_t callback, void *user_data)
 		if (!devinfo) {
 			LIBUSBMUXD_DEBUG(1, "%s: WARNING: got paired message for device handle %d, but couldn't find the corresponding handle in the device list. This event will be ignored.\n", __func__, handle);
 		} else {
-			generate_event(callback, devinfo, UE_DEVICE_PAIRED, user_data);
+			generate_event(devinfo, UE_DEVICE_PAIRED);
 		}
 	} else if (hdr.length > 0) {
 		LIBUSBMUXD_DEBUG(1, "%s: Unexpected message type %d length %d received!\n", __func__, hdr.message, hdr.length);
@@ -1032,68 +1057,145 @@ static void device_monitor_cleanup(void* data)
  */
 static void *device_monitor(void *data)
 {
+	int running = 1;
 	collection_init(&devices);
+	cancelling = 0;
 
 #ifdef HAVE_THREAD_CLEANUP
 	thread_cleanup_push(device_monitor_cleanup, NULL);
 #endif
-	while (event_cb) {
+	do {
 
 		listenfd = usbmuxd_listen();
 		if (listenfd < 0) {
 			continue;
 		}
 
-		while (event_cb) {
-			int res = get_next_event(listenfd, event_cb, data);
+		while (running) {
+			int res = get_next_event(listenfd);
 			if (res < 0) {
 			    break;
 			}
 		}
-	}
+
+		mutex_lock(&listener_mutex);
+		if (collection_count(&listeners) == 0) {
+			running = 0;
+		}
+		mutex_unlock(&listener_mutex);
+	} while (running);
 
 #ifdef HAVE_THREAD_CLEANUP
 	thread_cleanup_pop(1);
 #else
 	device_monitor_cleanup(NULL);
 #endif
+
 	return NULL;
+}
+
+static void init_listeners(void)
+{
+	collection_init(&listeners);
+	mutex_init(&listener_mutex);
+}
+
+USBMUXD_API int usbmuxd_events_subscribe(usbmuxd_subscription_context_t *ctx, usbmuxd_event_cb_t callback, void *user_data)
+{
+	if (!ctx || !callback) {
+		return -EINVAL;
+	}
+
+	thread_once(&listener_init_once, init_listeners);
+
+	mutex_lock(&listener_mutex);
+	*ctx = malloc(sizeof(struct usbmuxd_subscription_context));
+	if (!*ctx) {
+		mutex_unlock(&listener_mutex);
+		LIBUSBMUXD_ERROR("ERROR: %s: malloc failed\n", __func__);
+		return -ENOMEM;
+	}
+	(*ctx)->callback = callback;
+	(*ctx)->user_data = user_data;
+
+	collection_add(&listeners, *ctx);
+
+	if (devmon == THREAD_T_NULL || !thread_alive(devmon)) {
+		mutex_unlock(&listener_mutex);
+		int res = thread_new(&devmon, device_monitor, NULL);
+		if (res != 0) {
+			free(*ctx);
+			LIBUSBMUXD_DEBUG(1, "%s: ERROR: Could not start device watcher thread!\n", __func__);
+			return res;
+		}
+	} else {
+		/* we need to submit DEVICE_ADD events to the new listener */
+		FOREACH(usbmuxd_device_info_t *dev, &devices) {
+			if (dev) {
+				usbmuxd_event_t ev;
+				ev.event = UE_DEVICE_ADD;
+				memcpy(&ev.device, dev, sizeof(usbmuxd_device_info_t));
+				(*ctx)->callback(&ev, (*ctx)->user_data);
+			}
+		} ENDFOREACH
+		mutex_unlock(&listener_mutex);
+	}
+
+	return 0;
+}
+
+USBMUXD_API int usbmuxd_events_unsubscribe(usbmuxd_subscription_context_t ctx)
+{
+	int ret = 0;
+	int num = 0;
+
+	if (!ctx) {
+		return -EINVAL;
+	}
+
+	mutex_lock(&listener_mutex);
+	if (collection_remove(&listeners, ctx) == 0) {
+		free(ctx);
+	}
+	num = collection_count(&listeners);
+	mutex_unlock(&listener_mutex);
+
+	if (num == 0) {
+		int res = 0;
+		cancelling = 1;
+		socket_shutdown(listenfd, SHUT_RDWR);
+		if (thread_alive(devmon)) {
+			thread_cancel(devmon);
+			res = thread_join(devmon);
+			thread_free(devmon);
+			devmon = THREAD_T_NULL;
+		}
+		if ((res != 0) && (res != ESRCH)) {
+			ret = res;
+		}
+	}
+
+	return ret;
 }
 
 USBMUXD_API int usbmuxd_subscribe(usbmuxd_event_cb_t callback, void *user_data)
 {
-	int res;
-
 	if (!callback) {
 		return -EINVAL;
 	}
-	event_cb = callback;
 
-	res = thread_new(&devmon, device_monitor, user_data);
-	if (res != 0) {
-		LIBUSBMUXD_DEBUG(1, "%s: ERROR: Could not start device watcher thread!\n", __func__);
-		return res;
+	if (event_ctx) {
+		usbmuxd_events_unsubscribe(event_ctx);
+		event_ctx = NULL;
 	}
-	return 0;
+	return usbmuxd_events_subscribe(&event_ctx, callback, user_data);
 }
 
 USBMUXD_API int usbmuxd_unsubscribe()
 {
-	int res = 0;
-	event_cb = NULL;
-
-	socket_shutdown(listenfd, SHUT_RDWR);
-
-	if (thread_alive(devmon)) {
-		thread_cancel(devmon);
-		res = thread_join(devmon);
-		thread_free(devmon);
-	}
-	if ((res != 0) && (res != ESRCH)) {
-		return res;
-	}
-
-	return 0;
+	int res = usbmuxd_events_unsubscribe(event_ctx);
+	event_ctx = NULL;
+	return res;
 }
 
 USBMUXD_API int usbmuxd_get_device_list(usbmuxd_device_info_t **device_list)

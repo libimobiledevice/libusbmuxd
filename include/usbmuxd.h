@@ -80,19 +80,57 @@ typedef struct {
 typedef void (*usbmuxd_event_cb_t) (const usbmuxd_event_t *event, void *user_data);
 
 /**
- * Subscribe a callback function so that applications get to know about
- * device add/remove events.
+ * Subscription context type.
+ */
+typedef struct usbmuxd_subscription_context* usbmuxd_subscription_context_t;
+
+/**
+ * Subscribe a callback function to be called upon device add/remove events.
+ * This method can be called multiple times to register multiple callbacks
+ * since every subscription will have its own context (returned in the
+ * first parameter).
+ *
+ * @param context A pointer to a usbmuxd_subscription_context_t that will be
+ *    set upon creation of the subscription. The returned context must be
+ *    passed to usbmuxd_events_unsubscribe() to unsubscribe the callback.
+ * @param callback A callback function that is executed when an event occurs.
+ * @param user_data Custom data passed on to the callback function. The data
+ *    needs to be kept available until the callback function is unsubscribed.
+ *
+ * @return 0 on success or a negative errno value.
+ */
+int usbmuxd_events_subscribe(usbmuxd_subscription_context_t *context, usbmuxd_event_cb_t callback, void *user_data);
+
+/**
+ * Unsubscribe callback function
+ *
+ * @param context A valid context as returned from usbmuxd_events_subscribe().
+ *
+ * @return 0 on success or a negative errno value.
+ */
+int usbmuxd_events_unsubscribe(usbmuxd_subscription_context_t context);
+
+/**
+ * Subscribe a callback (deprecated)
  *
  * @param callback A callback function that is executed when an event occurs.
+ * @param user_data Custom data passed on to the callback function. The data
+ *    needs to be kept available until the callback function is unsubscribed.
  *
  * @return 0 on success or negative on error.
+ *
+ * @note Deprecated. Use usbmuxd_events_subscribe and usbmuxd_events_unsubscribe instead.
+ * @see usbmuxd_events_subscribe
  */
 int usbmuxd_subscribe(usbmuxd_event_cb_t callback, void *user_data);
 
 /**
- * Unsubscribe callback.
+ * Unsubscribe callback (deprecated)
  *
- * @return only 0 for now.
+ * @return 0 on success or negative on error.
+ *
+ * @note Deprecated. Use usbmuxd_events_subscribe and usbmuxd_events_unsubscribe instead.
+ * @see usbmuxd_events_unsubscribe
  */
 int usbmuxd_unsubscribe();
 
