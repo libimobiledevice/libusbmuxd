@@ -77,12 +77,12 @@ int thread_alive(THREAD_T thread)
 int thread_cancel(THREAD_T thread)
 {
 #ifdef WIN32
-	return 0;
+	return -1;
 #else
 #ifdef HAVE_PTHREAD_CANCEL
 	return pthread_cancel(thread);
 #else
-	return 0;
+	return -1;
 #endif
 #endif
 }

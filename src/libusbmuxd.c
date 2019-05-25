@@ -117,6 +117,7 @@ static int libusbmuxd_debug = 0;
 static struct collection devices;
 static THREAD_T devmon = THREAD_T_NULL;
 static int listenfd = -1;
+static int running = 0;
 static int cancelling = 0;
 
 static volatile int use_tag = 0;
@@ -858,7 +859,6 @@ static int usbmuxd_listen_poll()
 
 #ifdef HAVE_INOTIFY
 static int use_inotify = 1;
-
 static int usbmuxd_listen_inotify()
 {
 	int inot_fd;
@@ -1057,7 +1057,7 @@ static void device_monitor_cleanup(void* data)
  */
 static void *device_monitor(void *data)
 {
-	int running = 1;
+	running = 1;
 	collection_init(&devices);
 	cancelling = 0;
 
@@ -1173,7 +1173,9 @@ USBMUXD_API int usbmuxd_events_unsubscribe(usbmuxd_subscription_context_t ctx)
 		cancelling = 1;
 		socket_shutdown(listenfd, SHUT_RDWR);
 		if (thread_alive(devmon)) {
-			thread_cancel(devmon);
+			if (thread_cancel(devmon) < 0) {
+				running = 0;
+			}
 			res = thread_join(devmon);
 			thread_free(devmon);
 			devmon = THREAD_T_NULL;
