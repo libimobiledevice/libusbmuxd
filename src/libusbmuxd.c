@@ -73,10 +73,12 @@ extern int _NSGetExecutablePath(char* buf, uint32_t* bufsize);
 
 #ifdef HAVE_INOTIFY
 #include <sys/inotify.h>
+#include <sys/select.h>
 #define EVENT_SIZE  (sizeof (struct inotify_event))
 #define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 16))
 #define USBMUXD_DIRNAME "/var/run"
 #define USBMUXD_SOCKET_NAME "usbmuxd"
+static int use_inotify = 1;
 #endif /* HAVE_INOTIFY */
 
 #ifndef HAVE_STPNCPY
@@ -193,6 +195,9 @@ static int connect_usbmuxd_socket()
 				}
 				if (connect_addr && *connect_addr != '\0') {
 					int res = socket_connect(connect_addr, port);
+#ifdef HAVE_INOTIFY
+					use_inotify = 0;
+#endif
 					free(connect_addr);
 					return res;
 				}
@@ -858,7 +863,30 @@ static int usbmuxd_listen_poll()
 }
 
 #ifdef HAVE_INOTIFY
-static int use_inotify = 1;
+#ifndef HAVE_PSELECT
+static int pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, const struct timespec *timeout, const sigset_t *sigmask)
+{
+	int ready;
+	struct timeval tv;
+	struct timeval *p_timeout;
+	sigset_t origmask;
+
+	if (timeout) {
+		tv.tv_sec = timeout->tv_sec;
+		tv.tv_usec = timeout->tv_nsec / 1000;
+		p_timeout = &tv;
+	} else {
+		p_timeout = NULL;
+	}
+
+	pthread_sigmask(SIG_SETMASK, sigmask, &origmask);
+	ready = select(nfds, readfds, writefds, exceptfds, p_timeout);
+	pthread_sigmask(SIG_SETMASK, &origmask, NULL);
+
+	return ready;
+}
+#endif
+
 static int usbmuxd_listen_inotify()
 {
 	int inot_fd;
@@ -889,6 +917,18 @@ static int usbmuxd_listen_inotify()
 	}
 
 	while (1) {
+		fd_set rfds;
+		struct timespec tv = {1, 0};
+
+		FD_ZERO(&rfds);
+		FD_SET(inot_fd, &rfds);
+		int r = pselect(inot_fd+1, &rfds, NULL, NULL, &tv, NULL);
+		if (r < 0) {
+			break;
+		} else if (r == 0) {
+			continue;
+		}
+
 		ssize_t len, i;
 		char buff[EVENT_BUF_LEN] = {0};
 
@@ -946,7 +986,9 @@ retry:
 #endif
 
 	if (sfd < 0) {
-		LIBUSBMUXD_DEBUG(1, "%s: ERROR: usbmuxd was supposed to be running here...\n", __func__);
+		if (!cancelling) {
+			LIBUSBMUXD_DEBUG(1, "%s: ERROR: usbmuxd was supposed to be running here...\n", __func__);
+		}
 		return sfd;
 	}
 
@@ -1176,6 +1218,9 @@ USBMUXD_API int usbmuxd_events_unsubscribe(usbmuxd_subscription_context_t ctx)
 			if (thread_cancel(devmon) < 0) {
 				running = 0;
 			}
+#if defined(HAVE_INOTIFY) && !defined(HAVE_PTHREAD_CANCEL)
+			pthread_kill(devmon, SIGINT);
+#endif
 			res = thread_join(devmon);
 			thread_free(devmon);
 			devmon = THREAD_T_NULL;
