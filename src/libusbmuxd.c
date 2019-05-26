@@ -498,8 +498,7 @@ static int usbmuxd_get_result(int sfd, uint32_t tag, uint32_t *result, void **re
 			memcpy(result, res, sizeof(uint32_t));
 			ret = 1;
 		}
-		if (res)
-			free(res);
+		free(res);
 		return ret;
 	} else if (hdr.message == MESSAGE_PLIST) {
 		if (!result_plist) {
@@ -512,8 +511,7 @@ static int usbmuxd_get_result(int sfd, uint32_t tag, uint32_t *result, void **re
 	}
 
 	LIBUSBMUXD_DEBUG(1, "%s: Unexpected message of type %d received!\n", __func__, hdr.message);
-	if (res)
-		free(res);
+	free(res);
 	return -EPROTO;
 }
 
@@ -1074,9 +1072,7 @@ static int get_next_event(int sfd)
 	} else if (hdr.length > 0) {
 		LIBUSBMUXD_DEBUG(1, "%s: Unexpected message type %d length %d received!\n", __func__, hdr.message, hdr.length);
 	}
-	if (payload) {
-		free(payload);
-	}
+	free(payload);
 	return 0;
 }
 
@@ -1363,8 +1359,7 @@ retry:
 			} else {
 				LIBUSBMUXD_DEBUG(1, "%s: Unexpected message %d\n", __func__, hdr.message);
 			}
-			if (payload)
-				free(payload);
+			free(payload);
 		} else {
 			// we _should_ have all of them now.
 			// or perhaps an error occured.
