@@ -87,6 +87,7 @@ case ${host_os} in
     AC_CHECK_FUNC(pthread_cancel, [AC_DEFINE(HAVE_PTHREAD_CANCEL)], [
         AC_CHECK_LIB(pthread, [pthread_cancel],[AC_DEFINE(HAVE_PTHREAD_CANCEL)])
     ])
+    AC_CHECK_FUNCS([pselect])
     AC_CACHE_CHECK(for program_invocation_short_name, ac_cv_program_invocation_short_name,[
         AC_TRY_LINK([extern char* program_invocation_short_name;],[return program_invocation_short_name;],
             [ac_cv_program_invocation_short_name=yes],
