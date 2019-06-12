@@ -28,11 +28,19 @@
 #include <stdio.h>
 #include "collection.h"
 
+#undef NDEBUG // we need to make sure we still get assertions because we can't handle memory allocation errors
+#include <assert.h>
+
+#define INIT_NULL(addr, count) { unsigned int i_ = 0; for (i_ = 0; i_ < count; i_++) ((void**)addr)[i_] = NULL; }
+
+#define CAPACITY_STEP 8
+
 void collection_init(struct collection *col)
 {
-	col->list = malloc(sizeof(void *));
-	memset(col->list, 0, sizeof(void *));
-	col->capacity = 1;
+	col->list = malloc(sizeof(void *) * CAPACITY_STEP);
+	assert(col->list);
+	INIT_NULL(col->list, CAPACITY_STEP);
+	col->capacity = CAPACITY_STEP;
 }
 
 void collection_free(struct collection *col)
@@ -51,10 +59,12 @@ void collection_add(struct collection *col, void *element)
 			return;
 		}
 	}
-	col->list = realloc(col->list, sizeof(void*) * col->capacity * 2);
-	memset(&col->list[col->capacity], 0, sizeof(void *) * col->capacity);
+	void **newlist = realloc(col->list, sizeof(void*) * (col->capacity + CAPACITY_STEP));
+	assert(newlist);
+	col->list = newlist;
+	INIT_NULL(&col->list[col->capacity], CAPACITY_STEP);
 	col->list[col->capacity] = element;
-	col->capacity *= 2;
+	col->capacity += CAPACITY_STEP;
 }
 
 int collection_remove(struct collection *col, void *element)
