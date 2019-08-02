@@ -44,6 +44,10 @@ typedef unsigned int socklen_t;
 #include "socket.h"
 #include "usbmuxd.h"
 
+#ifndef ETIMEDOUT
+#define ETIMEDOUT 138
+#endif
+
 static uint16_t listen_port = 0;
 static uint16_t device_port = 0;
 static char* device_udid = NULL;

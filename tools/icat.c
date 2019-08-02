@@ -29,19 +29,35 @@
 #include <stddef.h>
 #include <unistd.h>
 #include <errno.h>
+#ifdef WIN32
+#include <windows.h>
+#include <winsock2.h>
+#else
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/ioctl.h>
+#endif
 
 #include "usbmuxd.h"
+#include "socket.h"
 
 static size_t read_data_socket(int fd, uint8_t* buf, size_t bufsize)
 {
-    size_t bytesavailable;
+#ifdef WIN32
+    u_long bytesavailable = 0;
+    if (fd == STDIN_FILENO) {
+        bytesavailable = bufsize;
+    } else if (ioctlsocket(fd, FIONREAD, &bytesavailable) != 0) {
+        perror("ioctlsocket FIONREAD failed");
+        exit(1);
+    }
+#else
+    size_t bytesavailable = 0;
     if (ioctl(fd, FIONREAD, &bytesavailable) != 0) {
         perror("ioctl FIONREAD failed");
         exit(1);
     }
+#endif
     size_t bufread = (bytesavailable >= bufsize) ? bufsize:bytesavailable;
     ssize_t ret = read(fd, buf, bufread);
     if (ret < 0) {
@@ -143,6 +159,6 @@ int main(int argc, char **argv)
         }
     }
 
-    close(devfd);
+    socket_close(devfd);
     return ret;
 }
