@@ -210,7 +210,7 @@ int socket_create(uint16_t port)
 
 	memset((void *) &saddr, 0, sizeof(saddr));
 	saddr.sin_family = AF_INET;
-	saddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	saddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	saddr.sin_port = htons(port);
 
 	if (0 > bind(sfd, (struct sockaddr *) &saddr, sizeof(saddr))) {
