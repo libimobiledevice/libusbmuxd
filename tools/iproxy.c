@@ -40,6 +40,7 @@ typedef unsigned int socklen_t;
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <netinet/in.h>
+#include <signal.h>
 #endif
 #include "socket.h"
 #include "usbmuxd.h"
@@ -277,6 +278,9 @@ int main(int argc, char **argv)
 		return -EINVAL;
 	}
 
+#ifndef WIN32
+	signal(SIGPIPE, SIG_IGN);
+#endif
 	// first create the listening socket endpoint waiting for connections.
 	mysock = socket_create(listen_port);
 	if (mysock < 0) {

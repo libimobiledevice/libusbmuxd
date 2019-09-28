@@ -36,6 +36,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/ioctl.h>
+#include <signal.h>
 #endif
 
 #include "usbmuxd.h"
@@ -86,6 +87,9 @@ int main(int argc, char **argv)
         return -EINVAL;
     }
 
+#ifndef WIN32
+    signal(SIGPIPE, SIG_IGN);
+#endif
     usbmuxd_device_info_t *dev_list = NULL;
     int count;
     if ((count = usbmuxd_get_device_list(&dev_list)) < 0) {
