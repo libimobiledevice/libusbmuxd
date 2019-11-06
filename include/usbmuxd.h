@@ -30,9 +30,9 @@ extern "C" {
 
 /** Device lookup options for usbmuxd_get_device. */
 enum usbmux_lookup_options {
-	DEVICE_LOOKUP_USBMUX = 1 << 1, /** include USBMUX devices during lookup */
-	DEVICE_LOOKUP_NETWORK = 1 << 2, /** include network devices during lookup */
-	DEVICE_LOOKUP_PREFER_NETWORK = 1 << 3 /** prefer network connection if device is available via USBMUX *and* network */
+	DEVICE_LOOKUP_USBMUX = 1 << 1, /**< include USBMUX devices during lookup */
+	DEVICE_LOOKUP_NETWORK = 1 << 2, /**< include network devices during lookup */
+	DEVICE_LOOKUP_PREFER_NETWORK = 1 << 3 /**< prefer network connection if device is available via USBMUX *and* network */
 };
 
 /** Type of connection a device is available on */
