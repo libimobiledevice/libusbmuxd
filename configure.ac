@@ -15,7 +15,7 @@ dnl libtool versioning
 #                 changes to the signature and the semantic)
 #  ? :+1 : ?   == just internal changes
 # CURRENT : REVISION : AGE
-LIBUSBMUXD_SO_VERSION=5:0:1
+LIBUSBMUXD_SO_VERSION=6:0:0
 
 
 dnl Minimum package versions
