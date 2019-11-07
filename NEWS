@@ -1,3 +1,12 @@
+Version 2.0.0
+~~~~~~~~~~~~~
+
+* Changes:
+  - Add proper support for USB and network (WiFi sync) devices reported by usbmuxd
+  - Add new usbmuxd_events_subscribe/unsubscribe functions with a context so it can be used in different threads
+  - Add new tool 'icat'
+  - Lots of bug fixes and other improvements
+
 Version 1.0.10
 ~~~~~~~~~~~~~~
 
