@@ -1,0 +1,20 @@
+name: C/C++ CI
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install libplit
+      run: |
+        git clone https://github.com/libimobiledevice/libplist
+        cd libplist
+        ./autogen.sh
+        make
+        sudo make install
+    - name: autogen
+      run: ./autogen.sh
+    - name: make
+      run: make -Wno-unused-parameter
+    - name: make install
+      run: sudo make install
