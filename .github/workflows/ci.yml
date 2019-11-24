@@ -15,6 +15,6 @@ jobs:
     - name: autogen
       run: ./autogen.sh
     - name: make
-      run: make -Wno-unused-parameter
+      run: make
     - name: make install
       run: sudo make install
