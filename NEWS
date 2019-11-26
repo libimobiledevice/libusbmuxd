@@ -1,3 +1,9 @@
+Version 2.0.1
+~~~~~~~~~~~~~
+
+* Changes:
+  - Rename 'icat' tool to 'inetcat' due to name conflict with sleuthkit's icat
+
 Version 2.0.0
 ~~~~~~~~~~~~~
 
