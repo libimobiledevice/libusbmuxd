@@ -1,5 +1,5 @@
 /*
- * icat.c -- simple netcat-like tool that enables service access to iOS devices
+ * inetcat.c -- simple netcat-like tool that enables service access to iOS devices
  *
  * Copyright (C) 2017 Adrien Guinet <adrien@guinet.me>
  *

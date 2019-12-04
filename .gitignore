@@ -37,4 +37,4 @@ docs/html
 libusbmuxd.pc
 tools/.libs/*
 tools/iproxy
-tools/icat
+tools/inetcat
