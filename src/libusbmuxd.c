@@ -1242,7 +1242,7 @@ USBMUXD_API int usbmuxd_subscribe(usbmuxd_event_cb_t callback, void *user_data)
 	return usbmuxd_events_subscribe(&event_ctx, callback, user_data);
 }
 
-USBMUXD_API int usbmuxd_unsubscribe()
+USBMUXD_API int usbmuxd_unsubscribe(void)
 {
 	int res = usbmuxd_events_unsubscribe(event_ctx);
 	event_ctx = NULL;
