@@ -132,7 +132,7 @@ int usbmuxd_subscribe(usbmuxd_event_cb_t callback, void *user_data);
  * @note Deprecated. Use usbmuxd_events_subscribe and usbmuxd_events_unsubscribe instead.
  * @see usbmuxd_events_unsubscribe
  */
-int usbmuxd_unsubscribe();
+int usbmuxd_unsubscribe(void);
 
 /**
  * Contacts usbmuxd and retrieves a list of connected devices.
