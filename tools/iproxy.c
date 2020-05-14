@@ -1,9 +1,9 @@
 /*
  * iproxy.c -- proxy that enables tcp service access to iOS devices
  *
- * Copyright (C) 2014	Martin Szulecki <m.szulecki@libimobiledevice.org>
- * Copyright (C) 2009	Nikias Bassen <nikias@gmx.li>
- * Copyright (C) 2009	Paul Sladen <libiphone@paul.sladen.org>
+ * Copyright (C) 2009-2020 Nikias Bassen <nikias@gmx.li>
+ * Copyright (C) 2014      Martin Szulecki <m.szulecki@libimobiledevice.org>
+ * Copyright (C) 2009      Paul Sladen <libiphone@paul.sladen.org>
  *
  * Based upon iTunnel source code, Copyright (c) 2008 Jing Su.
  * http://www.cs.toronto.edu/~jingsu/itunnel/
@@ -23,6 +23,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,6 +44,7 @@ typedef unsigned int socklen_t;
 #include <pthread.h>
 #include <netinet/in.h>
 #include <signal.h>
+#include <getopt.h>
 #endif
 #include "socket.h"
 #include "usbmuxd.h"
@@ -49,9 +53,11 @@ typedef unsigned int socklen_t;
 #define ETIMEDOUT 138
 #endif
 
+static int debug_level = 0;
 static uint16_t listen_port = 0;
 static uint16_t device_port = 0;
 static char* device_udid = NULL;
+static enum usbmux_lookup_options lookup_opts = 0;
 
 struct client_data {
 	int fd;
@@ -164,6 +170,8 @@ static void *acceptor_thread(void *arg)
 {
 	struct client_data *cdata;
 	usbmuxd_device_info_t *dev_list = NULL;
+	usbmuxd_device_info_t *dev = NULL;
+	usbmuxd_device_info_t muxdev;
 #ifdef WIN32
 	HANDLE ctos = NULL;
 #else
@@ -178,39 +186,41 @@ static void *acceptor_thread(void *arg)
 
 	cdata = (struct client_data*)arg;
 
-	if ((count = usbmuxd_get_device_list(&dev_list)) < 0) {
-		printf("Connecting to usbmuxd failed, terminating.\n");
-		free(dev_list);
-		if (cdata->fd > 0) {
-			socket_close(cdata->fd);
-		}
-		free(cdata);
-		return NULL;
-	}
-
-	fprintf(stdout, "Number of available devices == %d\n", count);
-
-	if (dev_list == NULL || dev_list[0].handle == 0) {
-		printf("No connected device found, terminating.\n");
-		free(dev_list);
-		if (cdata->fd > 0) {
-			socket_close(cdata->fd);
-		}
-		free(cdata);
-		return NULL;
-	}
-
-	usbmuxd_device_info_t *dev = NULL;
 	if (device_udid) {
+		if (usbmuxd_get_device(device_udid, &muxdev, lookup_opts) > 0) {
+			dev = &muxdev;
+		}
+	} else {
+		if ((count = usbmuxd_get_device_list(&dev_list)) < 0) {
+			printf("Connecting to usbmuxd failed, terminating.\n");
+			free(dev_list);
+			if (cdata->fd > 0) {
+				socket_close(cdata->fd);
+			}
+			free(cdata);
+			return NULL;
+		}
+
+		if (dev_list == NULL || dev_list[0].handle == 0) {
+			printf("No connected device found, terminating.\n");
+			free(dev_list);
+			if (cdata->fd > 0) {
+				socket_close(cdata->fd);
+			}
+			free(cdata);
+			return NULL;
+		}
+
 		int i;
 		for (i = 0; i < count; i++) {
-			if (strncmp(dev_list[i].udid, device_udid, sizeof(dev_list[0].udid)) == 0) {
+			if (dev_list[i].conn_type == CONNECTION_TYPE_USB && (lookup_opts & DEVICE_LOOKUP_USBMUX)) {
+				dev = &(dev_list[i]);
+				break;
+			} else if (dev_list[i].conn_type == CONNECTION_TYPE_NETWORK && (lookup_opts & DEVICE_LOOKUP_NETWORK)) {
 				dev = &(dev_list[i]);
 				break;
 			}
 		}
-	} else {
-		dev = &(dev_list[0]);
 	}
 
 	if (dev == NULL || dev->handle == 0) {
@@ -223,7 +233,7 @@ static void *acceptor_thread(void *arg)
 		return NULL;
 	}
 
-	fprintf(stdout, "Requesting connecion to device handle == %d (serial: %s), port %d\n", dev->handle, dev->udid, device_port);
+	fprintf(stdout, "Requesting connecion to %s device handle == %d (serial: %s), port %d\n", (dev->conn_type == CONNECTION_TYPE_NETWORK) ? "NETWORK" : "USB", dev->handle, dev->udid, device_port);
 
 	cdata->sfd = usbmuxd_connect(dev->handle, device_port);
 	free(dev_list);
@@ -252,29 +262,91 @@ static void *acceptor_thread(void *arg)
 	return NULL;
 }
 
+static void print_usage(int argc, char **argv, int is_error)
+{
+	char *name = NULL;
+	name = strrchr(argv[0], '/');
+	fprintf(is_error ? stderr : stdout, "Usage: %s [OPTIONS] LOCAL_PORT DEVICE_PORT\n", (name ? name + 1: argv[0]));
+	fprintf(is_error ? stderr : stdout,
+	  "Proxy that enables TCP service access to iOS devices.\n\n" \
+	  "  -u, --udid UDID    target specific device by UDID\n" \
+	  "  -n, --network      connect to network device\n" \
+	  "  -l, --local        connect to USB device (default)\n" \
+	  "  -h, --help         prints usage information\n" \
+	  "  -d, --debug        increase debug level\n" \
+	  "\n" \
+	  "Homepage: <" PACKAGE_URL ">\n"
+	  "Bug reports: <" PACKAGE_BUGREPORT ">\n"
+	  "\n"
+	);
+}
+
 int main(int argc, char **argv)
 {
 	int mysock = -1;
-
-	if (argc < 3) {
-		printf("usage: %s LOCAL_TCP_PORT DEVICE_TCP_PORT [UDID]\n", argv[0]);
-		return 0;
+	const struct option longopts[] = {
+		{ "debug", no_argument, NULL, 'd' },
+		{ "help", no_argument, NULL, 'h' },
+		{ "udid", required_argument, NULL, 'u' },
+		{ "local", no_argument, NULL, 'l' },
+		{ "network", no_argument, NULL, 'n' },
+		{ NULL, 0, NULL, 0}
+	};
+	int c = 0;
+	while ((c = getopt_long(argc, argv, "dhu:ln", longopts, NULL)) != -1) {
+		switch (c) {
+		case 'd':
+			libusbmuxd_set_debug_level(++debug_level);
+			break;
+		case 'u':
+			if (!*optarg) {
+				fprintf(stderr, "ERROR: UDID must not be empty!\n");
+				print_usage(argc, argv, 1);
+				return 2;
+			}
+			free(device_udid);
+			device_udid = strdup(optarg);
+			break;
+		case 'l':
+			lookup_opts |= DEVICE_LOOKUP_USBMUX;
+			break;
+		case 'n':
+			lookup_opts |= DEVICE_LOOKUP_NETWORK;
+			break;
+		case 'h':
+			print_usage(argc, argv, 0);
+			return 0;
+		default:
+			print_usage(argc, argv, 1);
+			return 2;
+		}
 	}
 
-	listen_port = atoi(argv[1]);
-	device_port = atoi(argv[2]);
-
-	if (argc > 3) {
-		device_udid = argv[3];
+	if (lookup_opts == 0) {
+		lookup_opts = DEVICE_LOOKUP_USBMUX;
 	}
+
+	argc -= optind;
+	argv += optind;
+
+	if (argc < 2) {
+		print_usage(argc + optind, argv - optind, 1);
+		free(device_udid);
+		return 2;
+	}
+
+	listen_port = atoi(argv[0]);
+	device_port = atoi(argv[1]);
 
 	if (!listen_port) {
-		fprintf(stderr, "Invalid listen_port specified!\n");
+		fprintf(stderr, "Invalid listen port specified!\n");
+		free(device_udid);
 		return -EINVAL;
 	}
 
 	if (!device_port) {
-		fprintf(stderr, "Invalid device_port specified!\n");
+		fprintf(stderr, "Invalid device port specified!\n");
+		free(device_udid);
 		return -EINVAL;
 	}
 
@@ -285,6 +357,7 @@ int main(int argc, char **argv)
 	mysock = socket_create(listen_port);
 	if (mysock < 0) {
 		fprintf(stderr, "Error creating socket: %s\n", strerror(errno));
+		free(device_udid);
 		return -errno;
 	} else {
 #ifdef WIN32
@@ -303,6 +376,7 @@ int main(int argc, char **argv)
 				if (!cdata) {
 					socket_close(c_sock);
 					fprintf(stderr, "ERROR: Out of memory\n");
+					free(device_udid);
 					return -1;
 				}
 				cdata->fd = c_sock;
@@ -320,6 +394,8 @@ int main(int argc, char **argv)
 		socket_close(c_sock);
 		socket_close(mysock);
 	}
+
+	free(device_udid);
 
 	return 0;
 }
