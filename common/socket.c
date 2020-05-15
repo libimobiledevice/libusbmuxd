@@ -161,11 +161,37 @@ int socket_connect_unix(const char *filename)
 	strncpy(name.sun_path, filename, sizeof(name.sun_path));
 	name.sun_path[sizeof(name.sun_path) - 1] = 0;
 
-	if (connect(sfd, (struct sockaddr*)&name, sizeof(name)) < 0) {
+	int flags = fcntl(sfd, F_GETFL, 0);
+	fcntl(sfd, F_SETFL, flags | O_NONBLOCK);
+
+	do {
+		if (connect(sfd, (struct sockaddr*)&name, sizeof(name)) != -1) {
+			break;
+		}
+		if (errno == EINPROGRESS) {
+			fd_set fds;
+			FD_ZERO(&fds);
+			FD_SET(sfd, &fds);
+
+			struct timeval timeout;
+			timeout.tv_sec = CONNECT_TIMEOUT / 1000;
+			timeout.tv_usec = (CONNECT_TIMEOUT - (timeout.tv_sec * 1000)) * 1000;
+			if (select(sfd + 1, NULL, &fds, NULL, &timeout) == 1) {
+				int so_error;
+				socklen_t len = sizeof(so_error);
+				getsockopt(sfd, SOL_SOCKET, SO_ERROR, (void*)&so_error, &len);
+				if (so_error == 0) {
+					break;
+				}
+			}
+		}
 		socket_close(sfd);
+		sfd = -1;
+	} while (0);
+
+	if (sfd < 0) {
 		if (verbose >= 2)
-			fprintf(stderr, "%s: connect: %s\n", __func__,
-					strerror(errno));
+			fprintf(stderr, "%s: connect: %s\n", __func__, strerror(errno));
 		return -1;
 	}
 
@@ -286,7 +312,8 @@ int socket_connect(const char *addr, uint16_t port)
 #ifdef WIN32
 		ioctlsocket(sfd, FIONBIO, &l_yes);
 #else
-		fcntl(sfd, F_SETFL, O_NONBLOCK);
+		flags = fcntl(sfd, F_GETFL, 0);
+		fcntl(sfd, F_SETFL, flags | O_NONBLOCK);
 #endif
 
 		if (connect(sfd, rp->ai_addr, rp->ai_addrlen) != -1) {
@@ -324,13 +351,6 @@ int socket_connect(const char *addr, uint16_t port)
 			fprintf(stderr, "%s: Could not connect to %s:%d\n", __func__, addr, port);
 		return -1;
 	}
-
-#ifdef WIN32
-	ioctlsocket(sfd, FIONBIO, &l_no);
-#else
-	flags = fcntl(sfd, F_GETFL, 0);
-	fcntl(sfd, F_SETFL, flags & (~O_NONBLOCK));
-#endif
 
 #ifdef SO_NOSIGPIPE
 	if (setsockopt(sfd, SOL_SOCKET, SO_NOSIGPIPE, (void*)&yes, sizeof(int)) == -1) {
