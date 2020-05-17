@@ -33,6 +33,7 @@
 #include <stddef.h>
 #include <unistd.h>
 #include <errno.h>
+#include <getopt.h>
 #ifdef WIN32
 #include <windows.h>
 #include <winsock2.h>
@@ -44,7 +45,6 @@ typedef unsigned int socklen_t;
 #include <pthread.h>
 #include <netinet/in.h>
 #include <signal.h>
-#include <getopt.h>
 #endif
 #include "socket.h"
 #include "usbmuxd.h"
