@@ -200,10 +200,42 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    int devfd = usbmuxd_connect(dev->handle, device_port);
+    int devfd = -1;
+    if (dev->conn_type == CONNECTION_TYPE_NETWORK) {
+        unsigned char saddr_[32];
+        memset(saddr_, '\0', sizeof(saddr_));
+        struct sockaddr* saddr = (struct sockaddr*)&saddr_[0];
+        if (((char*)dev->conn_data)[1] == 0x02) { // AF_INET
+            saddr->sa_family = AF_INET;
+            memcpy(&saddr->sa_data[0], (char*)dev->conn_data+2, 14);
+        }
+        else if (((char*)dev->conn_data)[1] == 0x1E) { //AF_INET6 (bsd)
+#ifdef AF_INET6
+            saddr->sa_family = AF_INET6;
+            memcpy(&saddr->sa_data[0], (char*)dev->conn_data+2, 26);
+#else
+            fprintf(stderr, "ERROR: Got an IPv6 address but this system doesn't support IPv6\n");
+            free(dev_list);
+            return 1;
+#endif
+        }
+        else {
+            fprintf(stderr, "Unsupported address family 0x%02x\n", ((char*)dev->conn_data)[1]);
+            free(dev_list);
+            return 1;
+        }
+        char addrtxt[48];
+        addrtxt[0] = '\0';
+        if (!socket_addr_to_string(saddr, addrtxt, sizeof(addrtxt))) {
+            fprintf(stderr, "Failed to convert network address: %d (%s)\n", errno, strerror(errno));
+        }
+	devfd = socket_connect_addr(saddr, device_port);
+    } else if (dev->conn_type == CONNECTION_TYPE_USB) {
+        devfd = usbmuxd_connect(dev->handle, device_port);
+    }
     free(dev_list);
     if (devfd < 0) {
-        fprintf(stderr, "Error connecting to device!\n");
+        fprintf(stderr, "Error connecting to device: %s\n", strerror(errno));
         return 1;
     }
 
