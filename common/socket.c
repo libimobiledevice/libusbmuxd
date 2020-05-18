@@ -690,6 +690,10 @@ int socket_receive_timeout(int fd, void *data, size_t length, int flags,
 int socket_send(int fd, void *data, size_t length)
 {
 	int flags = 0;
+	int res = socket_check_fd(fd, FDM_WRITE, 1000);
+	if (res <= 0) {
+		return res;
+	}
 #ifdef MSG_NOSIGNAL
 	flags |= MSG_NOSIGNAL;
 #endif
