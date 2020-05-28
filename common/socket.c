@@ -157,7 +157,7 @@ int socket_create_unix(const char *filename)
 		return -1;
 	}
 
-	if (listen(sock, 10) < 0) {
+	if (listen(sock, 100) < 0) {
 		perror("listen");
 		socket_close(sock);
 		return -1;
@@ -366,7 +366,7 @@ int socket_create(const char* addr, uint16_t port)
 		return -1;
 	}
 
-	if (listen(sfd, 1) < 0) {
+	if (listen(sfd, 100) < 0) {
 		perror("listen()");
 		socket_close(sfd);
 		return -1;
