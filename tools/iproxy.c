@@ -220,6 +220,7 @@ static void print_usage(int argc, char **argv, int is_error)
 	  "  -u, --udid UDID    target specific device by UDID\n" \
 	  "  -n, --network      connect to network device\n" \
 	  "  -l, --local        connect to USB device (default)\n" \
+	  "  -s, --source ADDR  source address for listening socket (default 127.0.0.1)\n" \
 	  "  -h, --help         prints usage information\n" \
 	  "  -d, --debug        increase debug level\n" \
 	  "\n" \
@@ -233,6 +234,7 @@ int main(int argc, char **argv)
 {
 	int mysock = -1;
 	char* device_udid = NULL;
+	char* source_addr = NULL;
 	uint16_t listen_port = 0;
 	uint16_t device_port = 0;
 	enum usbmux_lookup_options lookup_opts = 0;
@@ -243,10 +245,11 @@ int main(int argc, char **argv)
 		{ "udid", required_argument, NULL, 'u' },
 		{ "local", no_argument, NULL, 'l' },
 		{ "network", no_argument, NULL, 'n' },
+		{ "source", required_argument, NULL, 's' },
 		{ NULL, 0, NULL, 0}
 	};
 	int c = 0;
-	while ((c = getopt_long(argc, argv, "dhu:ln", longopts, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "dhu:lns:", longopts, NULL)) != -1) {
 		switch (c) {
 		case 'd':
 			libusbmuxd_set_debug_level(++debug_level);
@@ -265,6 +268,15 @@ int main(int argc, char **argv)
 			break;
 		case 'n':
 			lookup_opts |= DEVICE_LOOKUP_NETWORK;
+			break;
+		case 's':
+			if (!*optarg) {
+				fprintf(stderr, "ERROR: source address must not be empty!\n");
+				print_usage(argc, argv, 1);
+				return 2;
+			}
+			free(source_addr);
+			source_addr = strdup(optarg);
 			break;
 		case 'h':
 			print_usage(argc, argv, 0);
@@ -307,7 +319,7 @@ int main(int argc, char **argv)
 	signal(SIGPIPE, SIG_IGN);
 #endif
 	// first create the listening socket endpoint waiting for connections.
-	mysock = socket_create(listen_port);
+	mysock = socket_create(source_addr, listen_port);
 	if (mysock < 0) {
 		fprintf(stderr, "Error creating socket: %s\n", strerror(errno));
 		free(device_udid);
@@ -323,7 +335,10 @@ int main(int argc, char **argv)
 		while (1) {
 			printf("waiting for connection\n");
 			c_sock = socket_accept(mysock, listen_port);
-			if (c_sock) {
+			if (c_sock < 0) {
+				fprintf(stderr, "accept: %s\n", strerror(errno));
+				break;
+			} else {
 				printf("accepted connection, fd = %d\n", c_sock);
 				cdata = (struct client_data*)malloc(sizeof(struct client_data));
 				if (!cdata) {
@@ -344,8 +359,6 @@ int main(int argc, char **argv)
 				pthread_create(&acceptor, NULL, acceptor_thread, cdata);
 				pthread_detach(acceptor);
 #endif
-			} else {
-				break;
 			}
 		}
 		socket_close(c_sock);
@@ -353,6 +366,7 @@ int main(int argc, char **argv)
 	}
 
 	free(device_udid);
+	free(source_addr);
 
 	return 0;
 }

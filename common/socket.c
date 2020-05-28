@@ -255,7 +255,7 @@ int socket_connect_unix(const char *filename)
 }
 #endif
 
-int socket_create(uint16_t port)
+int socket_create(const char* addr, uint16_t port)
 {
 	int sfd = -1;
 	int yes = 1;
@@ -269,9 +269,79 @@ int socket_create(uint16_t port)
 		wsa_init = 1;
 	}
 #endif
-	struct sockaddr_in saddr;
+	struct sockaddr* srcaddr;
+	int srcaddr_len = 0;
+	int domain = PF_INET;
 
-	if (0 > (sfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP))) {
+#if defined(AF_INET6)
+	struct sockaddr_in6 saddr6;
+	memset((void*) &saddr6, 0, sizeof(saddr6));
+	saddr6.sin6_family = AF_INET6;
+	saddr6.sin6_port = htons(port);
+	saddr6.sin6_addr = in6addr_loopback;
+#endif
+
+	struct sockaddr_in saddr;
+	memset((void*) &saddr, 0, sizeof(saddr));
+	saddr.sin_family = AF_INET;
+	saddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	saddr.sin_port = htons(port);
+
+	if (addr) {
+		if (strchr(addr, ':')) {
+#ifdef AF_INET6
+#ifdef WIN32
+			struct sockaddr_storage ss;
+			int ss_size = sizeof(ss);
+			if (WSAStringToAddress((LPSTR)addr, AF_INET6, NULL, (struct sockaddr*)&ss, &ss_size) == 0) {
+				memcpy(&(saddr6.sin6_addr), &(((struct sockaddr_in6*)&ss)->sin6_addr), sizeof(struct in6_addr));
+			} else
+#else
+			if (inet_pton(AF_INET6, addr, &(saddr6.sin6_addr)) != 1)
+#endif
+			{
+				fprintf(stderr, "FATAL: Failed to convert '%s' to an IPv6 address.\n", addr);
+				socket_close(sfd);
+				return -1;
+			}
+			srcaddr = (struct sockaddr*)&saddr6;
+			srcaddr_len = sizeof(saddr6);
+			domain = PF_INET6;
+#else
+			fprintf(stderr, "FATAL: Got IPv6 address but AF_INET6 is not supported.\n");
+			socket_close(sfd);
+			return -1;
+#endif
+		} else {
+#ifdef WIN32
+			struct sockaddr_storage ss;
+			int ss_size = sizeof(ss);
+			if (WSAStringToAddress((LPSTR)addr, AF_INET, NULL, (struct sockaddr*)&ss, &ss_size) == 0) {
+				saddr.sin_addr.s_addr = ((struct sockaddr_in*)&ss)->sin_addr.s_addr;
+			} else
+#else
+			if (inet_pton(AF_INET, addr, &(saddr.sin_addr)) != 1)
+#endif
+			{
+				fprintf(stderr, "FATAL: Failed to convert '%s' to an IPv4 address.\n", addr);
+				socket_close(sfd);
+				return -1;
+			}
+			srcaddr = (struct sockaddr*)&saddr;
+			srcaddr_len = sizeof(saddr);
+		}
+	} else {
+#if !defined(WIN32) && defined(AF_INET6)
+		srcaddr = (struct sockaddr*)&saddr6;
+		srcaddr_len = sizeof(saddr6);
+		domain = PF_INET6;
+#else
+		srcaddr = (struct sockaddr*)&saddr;
+		srcaddr_len = sizeof(saddr);
+#endif
+	}
+
+	if ((sfd = socket(domain, SOCK_STREAM, IPPROTO_TCP)) < 0) {
 		perror("socket()");
 		return -1;
 	}
@@ -290,18 +360,13 @@ int socket_create(uint16_t port)
 	}
 #endif
 
-	memset((void *) &saddr, 0, sizeof(saddr));
-	saddr.sin_family = AF_INET;
-	saddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	saddr.sin_port = htons(port);
-
-	if (0 > bind(sfd, (struct sockaddr *) &saddr, sizeof(saddr))) {
+	if (bind(sfd, srcaddr, srcaddr_len) < 0) {
 		perror("bind()");
 		socket_close(sfd);
 		return -1;
 	}
 
-	if (listen(sfd, 1) == -1) {
+	if (listen(sfd, 1) < 0) {
 		perror("listen()");
 		socket_close(sfd);
 		return -1;
@@ -626,14 +691,13 @@ int socket_accept(int fd, uint16_t port)
 	socklen_t addr_len;
 #endif
 	int result;
-	struct sockaddr_in addr;
-
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	addr.sin_port = htons(port);
-
+#ifdef AF_INET6
+	struct sockaddr_in6 addr;
 	addr_len = sizeof(addr);
+#else
+	struct sockaddr_in addr;
+	addr_len = sizeof(addr);
+#endif
 	result = accept(fd, (struct sockaddr*)&addr, &addr_len);
 
 	return result;
