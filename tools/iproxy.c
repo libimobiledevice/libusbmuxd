@@ -232,11 +232,13 @@ static void print_usage(int argc, char **argv, int is_error)
 
 int main(int argc, char **argv)
 {
-	int mysock = -1;
 	char* device_udid = NULL;
 	char* source_addr = NULL;
-	uint16_t listen_port = 0;
-	uint16_t device_port = 0;
+	uint16_t listen_port[16];
+	uint16_t device_port[16];
+	int listen_sock[16] = { -1, };
+	int num_pairs = 0;
+	int i = 0;
 	enum usbmux_lookup_options lookup_opts = 0;
 
 	const struct option longopts[] = {
@@ -294,75 +296,138 @@ int main(int argc, char **argv)
 	argc -= optind;
 	argv += optind;
 
-	if (argc < 2) {
+	if (argc == 0) {
+		fprintf(stderr, "ERROR: Not enough parameters. Need at least one pair of ports.\n");
 		print_usage(argc + optind, argv - optind, 1);
 		free(device_udid);
+		free(source_addr);
 		return 2;
 	}
 
-	listen_port = atoi(argv[0]);
-	device_port = atoi(argv[1]);
-
-	if (!listen_port) {
-		fprintf(stderr, "Invalid listen port specified!\n");
-		free(device_udid);
-		return -EINVAL;
-	}
-
-	if (!device_port) {
-		fprintf(stderr, "Invalid device port specified!\n");
-		free(device_udid);
-		return -EINVAL;
+	if (argc == 2 && (strchr(argv[0], ':') == NULL) && (strchr(argv[1], ':') == NULL)) {
+		/* support old-style port pair specification */
+		char* endp = NULL;
+		listen_port[0] = (uint16_t)strtol(argv[0], &endp, 10);
+		if (!listen_port[0] || *endp != '\0') {
+			fprintf(stderr, "Invalid listen port specified in argument '%s'!\n", argv[0]);
+			free(device_udid);
+			free(source_addr);
+			return -EINVAL;
+		}
+		endp = NULL;
+		device_port[0] = (uint16_t)strtol(argv[1], &endp, 10);
+		if (!device_port[0] || *endp != '\0') {
+			fprintf(stderr, "Invalid device port specified in argument '%s'!\n", argv[1]);
+			free(device_udid);
+			free(source_addr);
+			return -EINVAL;
+		}
+		num_pairs = 1;
+	} else {
+		/* new style, colon-separated local:device port pairs */
+		for (i = 0; i < argc; i++) {
+			char* endp = NULL;
+			listen_port[i] = (uint16_t)strtol(argv[i], &endp, 10);
+			if (!listen_port[i] || (*endp != ':')) {
+				fprintf(stderr, "Invalid listen port specified in argument '%s'!\n", argv[i]);
+				free(device_udid);
+				free(source_addr);
+				return -EINVAL;
+			}
+			device_port[i] = (uint16_t)strtol(endp+1, &endp, 10);
+			if (!device_port[i] || (*endp != '\0')) {
+				fprintf(stderr, "Invalid device port specified in argument '%s'!\n", argv[i+1]);
+				free(device_udid);
+				free(source_addr);
+				return -EINVAL;
+			}
+		}
+		num_pairs = argc;
 	}
 
 #ifndef WIN32
 	signal(SIGPIPE, SIG_IGN);
 #endif
-	// first create the listening socket endpoint waiting for connections.
-	mysock = socket_create(source_addr, listen_port);
-	if (mysock < 0) {
-		fprintf(stderr, "Error creating socket: %s\n", strerror(errno));
-		free(device_udid);
-		return -errno;
-	} else {
+
+	// first create the listening sockets
+	for (i = 0; i < num_pairs; i++) {
+		printf("Creating listening port %d for device port %d\n", listen_port[i], device_port[i]);
+		listen_sock[i] = socket_create(source_addr, listen_port[i]);
+		if (listen_sock[i] < 0) {
+			int j;
+			fprintf(stderr, "Error creating socket for listen port %u: %s\n", listen_port[i], strerror(errno));
+			free(source_addr);
+			free(device_udid);
+			for (j = i; j >= 0; j--) {
+				socket_close(listen_sock[j]);
+			}
+			return -errno;
+		}
+	}
+
+	// make them non-blocking and add them to fd set
+	fd_set fds;
+	FD_ZERO(&fds);
+	for (i = 0; i < num_pairs; i++) {
 #ifdef WIN32
-		HANDLE acceptor = NULL;
+		u_long l_yes = 1;
+		ioctlsocket(listen_sock[i], FIONBIO, &l_yes);
 #else
-		pthread_t acceptor;
+		int flags = fcntl(listen_sock[i], F_GETFL, 0);
+		fcntl(listen_sock[i], F_SETFL, flags | O_NONBLOCK);
 #endif
-		struct client_data *cdata;
-		int c_sock;
-		while (1) {
-			printf("waiting for connection\n");
-			c_sock = socket_accept(mysock, listen_port);
-			if (c_sock < 0) {
-				fprintf(stderr, "accept: %s\n", strerror(errno));
-				break;
-			} else {
-				printf("accepted connection, fd = %d\n", c_sock);
-				cdata = (struct client_data*)malloc(sizeof(struct client_data));
-				if (!cdata) {
-					socket_close(c_sock);
-					fprintf(stderr, "ERROR: Out of memory\n");
-					free(device_udid);
-					return -1;
+		FD_SET(listen_sock[i], &fds);
+	}
+
+	// main loop
+	while (1) {
+		printf("waiting for connection\n");
+		fd_set read_fds = fds;
+		int ret_sel = select(listen_sock[num_pairs-1]+1, &read_fds, NULL, NULL, NULL);
+		if (ret_sel < 0) {
+			perror("select");
+			break;
+		}
+		for (i = 0; i < num_pairs; i++) {
+			if (FD_ISSET(listen_sock[i], &read_fds)) {
+#ifdef WIN32
+				HANDLE acceptor = NULL;
+#else
+				pthread_t acceptor;
+#endif
+				struct client_data *cdata;
+				int c_sock = socket_accept(listen_sock[i], listen_port[i]);
+				if (c_sock < 0) {
+					fprintf(stderr, "accept: %s\n", strerror(errno));
+					break;
+				} else {
+					printf("New connection for %d->%d, fd = %d\n", listen_port[i], device_port[i], c_sock);
+					cdata = (struct client_data*)malloc(sizeof(struct client_data));
+					if (!cdata) {
+						socket_close(c_sock);
+						fprintf(stderr, "ERROR: Out of memory\n");
+						free(device_udid);
+						return -1;
+					}
+					cdata->fd = c_sock;
+					cdata->sfd = -1;
+					cdata->udid = strdup(device_udid);
+					cdata->lookup_opts = lookup_opts;
+					cdata->device_port = device_port[i];
+#ifdef WIN32
+					acceptor = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)acceptor_thread, cdata, 0, NULL);
+					CloseHandle(acceptor);
+#else
+					pthread_create(&acceptor, NULL, acceptor_thread, cdata);
+					pthread_detach(acceptor);
+#endif
 				}
-				cdata->fd = c_sock;
-				cdata->sfd = -1;
-				cdata->udid = strdup(device_udid);
-				cdata->lookup_opts = lookup_opts;
-				cdata->device_port = device_port;
-#ifdef WIN32
-				acceptor = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)acceptor_thread, cdata, 0, NULL);
-				CloseHandle(acceptor);
-#else
-				pthread_create(&acceptor, NULL, acceptor_thread, cdata);
-				pthread_detach(acceptor);
-#endif
 			}
 		}
-		socket_close(c_sock);
-		socket_close(mysock);
+	}
+
+	for (i = 0; i < num_pairs; i++) {
+		socket_close(listen_sock[i]);
 	}
 
 	free(device_udid);
