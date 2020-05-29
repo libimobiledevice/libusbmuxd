@@ -411,7 +411,7 @@ int main(int argc, char **argv)
 					}
 					cdata->fd = c_sock;
 					cdata->sfd = -1;
-					cdata->udid = strdup(device_udid);
+					cdata->udid = (device_udid) ? strdup(device_udid) : NULL;
 					cdata->lookup_opts = lookup_opts;
 					cdata->device_port = device_port[i];
 #ifdef WIN32
