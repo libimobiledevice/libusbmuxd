@@ -214,9 +214,10 @@ static void print_usage(int argc, char **argv, int is_error)
 {
 	char *name = NULL;
 	name = strrchr(argv[0], '/');
-	fprintf(is_error ? stderr : stdout, "Usage: %s [OPTIONS] LOCAL_PORT DEVICE_PORT\n", (name ? name + 1: argv[0]));
+	fprintf(is_error ? stderr : stdout, "Usage: %s [OPTIONS] LOCAL_PORT:DEVICE_PORT [LOCAL_PORT2:DEVICE_PORT2 ...]\n\n", (name ? name+1 : argv[0]));
 	fprintf(is_error ? stderr : stdout,
-	  "Proxy that enables TCP service access to iOS devices.\n\n" \
+	  "Proxy that binds local TCP ports to be forwarded to the specified ports on a usbmux device.\n\n" \
+	  "OPTIONS:\n" \
 	  "  -u, --udid UDID    target specific device by UDID\n" \
 	  "  -n, --network      connect to network device\n" \
 	  "  -l, --local        connect to USB device (default)\n" \
