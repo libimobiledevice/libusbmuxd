@@ -126,6 +126,7 @@ common/Makefile
 src/Makefile
 include/Makefile
 tools/Makefile
+docs/Makefile
 libusbmuxd.pc
 ])
 
