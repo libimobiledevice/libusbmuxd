@@ -112,7 +112,8 @@ static void *acceptor_thread(void *arg)
 			if (dev_list[i].conn_type == CONNECTION_TYPE_USB && (cdata->lookup_opts & DEVICE_LOOKUP_USBMUX)) {
 				dev = &(dev_list[i]);
 				break;
-			} else if (dev_list[i].conn_type == CONNECTION_TYPE_NETWORK && (cdata->lookup_opts & DEVICE_LOOKUP_NETWORK)) {
+			}
+			if (dev_list[i].conn_type == CONNECTION_TYPE_NETWORK && (cdata->lookup_opts & DEVICE_LOOKUP_NETWORK)) {
 				dev = &(dev_list[i]);
 				break;
 			}
@@ -459,28 +460,27 @@ int main(int argc, char **argv)
 				if (c_sock < 0) {
 					fprintf(stderr, "accept: %s\n", strerror(errno));
 					break;
-				} else {
-					printf("New connection for %d->%d, fd = %d\n", listen_port[listen_sock[i].index], device_port[listen_sock[i].index], c_sock);
-					cdata = (struct client_data*)malloc(sizeof(struct client_data));
-					if (!cdata) {
-						socket_close(c_sock);
-						fprintf(stderr, "ERROR: Out of memory\n");
-						free(device_udid);
-						return -1;
-					}
-					cdata->fd = c_sock;
-					cdata->sfd = -1;
-					cdata->udid = (device_udid) ? strdup(device_udid) : NULL;
-					cdata->lookup_opts = lookup_opts;
-					cdata->device_port = device_port[listen_sock[i].index];
-#ifdef WIN32
-					acceptor = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)acceptor_thread, cdata, 0, NULL);
-					CloseHandle(acceptor);
-#else
-					pthread_create(&acceptor, NULL, acceptor_thread, cdata);
-					pthread_detach(acceptor);
-#endif
 				}
+				printf("New connection for %d->%d, fd = %d\n", listen_port[listen_sock[i].index], device_port[listen_sock[i].index], c_sock);
+				cdata = (struct client_data*)malloc(sizeof(struct client_data));
+				if (!cdata) {
+					socket_close(c_sock);
+					fprintf(stderr, "ERROR: Out of memory\n");
+					free(device_udid);
+					return -1;
+				}
+				cdata->fd = c_sock;
+				cdata->sfd = -1;
+				cdata->udid = (device_udid) ? strdup(device_udid) : NULL;
+				cdata->lookup_opts = lookup_opts;
+				cdata->device_port = device_port[listen_sock[i].index];
+#ifdef WIN32
+				acceptor = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)acceptor_thread, cdata, 0, NULL);
+				CloseHandle(acceptor);
+#else
+				pthread_create(&acceptor, NULL, acceptor_thread, cdata);
+				pthread_detach(acceptor);
+#endif
 			}
 		}
 	}
