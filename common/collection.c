@@ -31,7 +31,7 @@
 #undef NDEBUG // we need to make sure we still get assertions because we can't handle memory allocation errors
 #include <assert.h>
 
-#define INIT_NULL(addr, count) { unsigned int i_ = 0; for (i_ = 0; i_ < count; i_++) ((void**)addr)[i_] = NULL; }
+#define INIT_NULL(addr, count) { unsigned int i_ = 0; for (i_ = 0; i_ < (count); i_++) ((void**)(addr))[i_] = NULL; }
 
 #define CAPACITY_STEP 8
 
