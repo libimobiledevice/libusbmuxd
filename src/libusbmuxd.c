@@ -340,7 +340,9 @@ static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload
 			LIBUSBMUXD_DEBUG(1, "%s: Error receiving packet: %s\n", __func__, strerror(-recv_len));
 		}
 		return recv_len;
-	} else if ((size_t)recv_len < sizeof(hdr)) {
+	}
+
+	if ((size_t)recv_len < sizeof(hdr)) {
 		LIBUSBMUXD_DEBUG(1, "%s: Received packet is too small, got %d bytes!\n", __func__, recv_len);
 		return recv_len;
 	}
@@ -500,7 +502,9 @@ static int usbmuxd_get_result(int sfd, uint32_t tag, uint32_t *result, void **re
 		}
 		free(res);
 		return ret;
-	} else if (hdr.message == MESSAGE_PLIST) {
+	}
+
+	if (hdr.message == MESSAGE_PLIST) {
 		if (!result_plist) {
 			LIBUSBMUXD_DEBUG(1, "%s: MESSAGE_PLIST result but result_plist pointer is NULL!\n", __func__);
 			return -1;
@@ -923,7 +927,9 @@ static int usbmuxd_listen_inotify()
 		int r = pselect(inot_fd+1, &rfds, NULL, NULL, &tv, NULL);
 		if (r < 0) {
 			break;
-		} else if (r == 0) {
+		}
+
+		if (r == 0) {
 			continue;
 		}
 
@@ -1466,7 +1472,8 @@ USBMUXD_API int usbmuxd_get_device(const char *udid, usbmuxd_device_info_t *devi
 			if ((options & DEVICE_LOOKUP_USBMUX) && (dev_list[i].conn_type == CONNECTION_TYPE_USB)) {
 				dev_usbmuxd = &dev_list[i];
 				break;
-			} else if ((options & DEVICE_LOOKUP_NETWORK) && (dev_list[i].conn_type == CONNECTION_TYPE_NETWORK)) {
+			}
+			if ((options & DEVICE_LOOKUP_NETWORK) && (dev_list[i].conn_type == CONNECTION_TYPE_NETWORK)) {
 				dev_network = &dev_list[i];
 				break;
 			}
@@ -1577,7 +1584,9 @@ USBMUXD_API int usbmuxd_send(int sfd, const char *data, uint32_t len, uint32_t *
 		num_sent = errno;
 		LIBUSBMUXD_DEBUG(1, "%s: Error %d when sending: %s\n", __func__, num_sent, strerror(num_sent));
 		return -num_sent;
-	} else if ((uint32_t)num_sent < len) {
+	}
+
+	if ((uint32_t)num_sent < len) {
 		LIBUSBMUXD_DEBUG(1, "%s: Warning: Did not send enough (only %d of %d)\n", __func__, num_sent, len);
 	}
 

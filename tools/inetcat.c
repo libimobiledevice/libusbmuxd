@@ -197,7 +197,8 @@ int main(int argc, char **argv)
             if (dev_list[i].conn_type == CONNECTION_TYPE_USB && (lookup_opts & DEVICE_LOOKUP_USBMUX)) {
                 dev = &(dev_list[i]);
                 break;
-            } else if (dev_list[i].conn_type == CONNECTION_TYPE_NETWORK && (lookup_opts & DEVICE_LOOKUP_NETWORK)) {
+            }
+            if (dev_list[i].conn_type == CONNECTION_TYPE_NETWORK && (lookup_opts & DEVICE_LOOKUP_NETWORK)) {
                 dev = &(dev_list[i]);
                 break;
             }
