@@ -1138,31 +1138,31 @@ static void init_listeners(void)
 	mutex_init(&listener_mutex);
 }
 
-USBMUXD_API int usbmuxd_events_subscribe(usbmuxd_subscription_context_t *ctx, usbmuxd_event_cb_t callback, void *user_data)
+USBMUXD_API int usbmuxd_events_subscribe(usbmuxd_subscription_context_t *context, usbmuxd_event_cb_t callback, void *user_data)
 {
-	if (!ctx || !callback) {
+	if (!context || !callback) {
 		return -EINVAL;
 	}
 
 	thread_once(&listener_init_once, init_listeners);
 
 	mutex_lock(&listener_mutex);
-	*ctx = malloc(sizeof(struct usbmuxd_subscription_context));
-	if (!*ctx) {
+	*context = malloc(sizeof(struct usbmuxd_subscription_context));
+	if (!*context) {
 		mutex_unlock(&listener_mutex);
 		LIBUSBMUXD_ERROR("ERROR: %s: malloc failed\n", __func__);
 		return -ENOMEM;
 	}
-	(*ctx)->callback = callback;
-	(*ctx)->user_data = user_data;
+	(*context)->callback = callback;
+	(*context)->user_data = user_data;
 
-	collection_add(&listeners, *ctx);
+	collection_add(&listeners, *context);
 
 	if (devmon == THREAD_T_NULL || !thread_alive(devmon)) {
 		mutex_unlock(&listener_mutex);
 		int res = thread_new(&devmon, device_monitor, NULL);
 		if (res != 0) {
-			free(*ctx);
+			free(*context);
 			LIBUSBMUXD_DEBUG(1, "%s: ERROR: Could not start device watcher thread!\n", __func__);
 			return res;
 		}
@@ -1173,7 +1173,7 @@ USBMUXD_API int usbmuxd_events_subscribe(usbmuxd_subscription_context_t *ctx, us
 				usbmuxd_event_t ev;
 				ev.event = UE_DEVICE_ADD;
 				memcpy(&ev.device, dev, sizeof(usbmuxd_device_info_t));
-				(*ctx)->callback(&ev, (*ctx)->user_data);
+				(*context)->callback(&ev, (*context)->user_data);
 			}
 		} ENDFOREACH
 		mutex_unlock(&listener_mutex);
@@ -1182,26 +1182,26 @@ USBMUXD_API int usbmuxd_events_subscribe(usbmuxd_subscription_context_t *ctx, us
 	return 0;
 }
 
-USBMUXD_API int usbmuxd_events_unsubscribe(usbmuxd_subscription_context_t ctx)
+USBMUXD_API int usbmuxd_events_unsubscribe(usbmuxd_subscription_context_t context)
 {
 	int ret = 0;
 	int num = 0;
 
-	if (!ctx) {
+	if (!context) {
 		return -EINVAL;
 	}
 
 	mutex_lock(&listener_mutex);
-	if (collection_remove(&listeners, ctx) == 0) {
+	if (collection_remove(&listeners, context) == 0) {
 		FOREACH(usbmuxd_device_info_t *dev, &devices) {
 			if (dev) {
 				usbmuxd_event_t ev;
 				ev.event = UE_DEVICE_REMOVE;
 				memcpy(&ev.device, dev, sizeof(usbmuxd_device_info_t));
-				(ctx)->callback(&ev, (ctx)->user_data);
+				(context)->callback(&ev, (context)->user_data);
 			}
 		} ENDFOREACH
-		free(ctx);
+		free(context);
 	}
 	num = collection_count(&listeners);
 	mutex_unlock(&listener_mutex);
