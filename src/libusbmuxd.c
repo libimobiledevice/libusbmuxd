@@ -1779,7 +1779,6 @@ USBMUXD_API void libusbmuxd_set_use_inotify(int set)
 #ifdef HAVE_INOTIFY
 	use_inotify = set;
 #endif
-	return;
 }
 
 USBMUXD_API void libusbmuxd_set_debug_level(int level)
