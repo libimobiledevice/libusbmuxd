@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(libusbmuxd, 2.0.2, [https://github.com/libimobiledevice/libusbmuxd/issues],, [https://github.com/libimobiledevice/libusbmuxd])
+AC_INIT(libusbmuxd, 2.0.2, [https://github.com/libimobiledevice/libusbmuxd/issues],, [https://libimobiledevice.org])
 AM_INIT_AUTOMAKE([dist-bzip2 no-dist-gzip check-news])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
 AC_CONFIG_SRCDIR([src/])
