@@ -1,3 +1,17 @@
+Version 2.0.2
+~~~~~~~~~~~~~
+
+* Changes:
+  - Fix compiler warnings
+  - Handle USB and network devices with new options in tools
+  - Make connecting sockets non-blocking
+  - Fix win32 build
+  - Switch from concurrent threads to loop with select()
+  - Allow to specify source address for listening socket in iproxy
+  - Allow to map multiple ports in iproxy
+  - Fix crash when no UDID is provided
+  - Add man pages for iproxy and inetcat tools
+
 Version 2.0.1
 ~~~~~~~~~~~~~
 
