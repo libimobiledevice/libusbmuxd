@@ -79,18 +79,20 @@ static void print_usage(int argc, char **argv, int is_error)
 {
     char *name = NULL;
     name = strrchr(argv[0], '/');
-    fprintf(is_error ? stderr : stdout, "Usage: %s [OPTIONS] DEVICE_PORT\n\n", (name ? name + 1: argv[0]));
+    fprintf(is_error ? stderr : stdout, "Usage: %s [OPTIONS] DEVICE_PORT\n", (name ? name + 1: argv[0]));
     fprintf(is_error ? stderr : stdout,
-      "Opens a read/write interface via STDIN/STDOUT to a TCP port on a usbmux device.\n\n" \
-      "  -u, --udid UDID    target specific device by UDID\n" \
-      "  -n, --network      connect to network device\n" \
-      "  -l, --local        connect to USB device (default)\n" \
-      "  -h, --help         prints usage information\n" \
-      "  -d, --debug        increase debug level\n" \
-      "\n" \
-      "Homepage: <" PACKAGE_URL ">\n"
-      "Bug reports: <" PACKAGE_BUGREPORT ">\n"
-      "\n"
+        "\n" \
+        "Opens a read/write interface via STDIN/STDOUT to a TCP port on a usbmux device.\n" \
+        "\n" \
+        "OPTIONS:\n" \
+        "  -u, --udid UDID    target specific device by UDID\n" \
+        "  -n, --network      connect to network device\n" \
+        "  -l, --local        connect to USB device (default)\n" \
+        "  -h, --help         prints usage information\n" \
+        "  -d, --debug        increase debug level\n" \
+        "\n" \
+        "Homepage:    <" PACKAGE_URL ">\n"
+        "Bug Reports: <" PACKAGE_BUGREPORT ">\n"
     );
 }
 

@@ -214,20 +214,21 @@ static void print_usage(int argc, char **argv, int is_error)
 {
 	char *name = NULL;
 	name = strrchr(argv[0], '/');
-	fprintf(is_error ? stderr : stdout, "Usage: %s [OPTIONS] LOCAL_PORT:DEVICE_PORT [LOCAL_PORT2:DEVICE_PORT2 ...]\n\n", (name ? name+1 : argv[0]));
+	fprintf(is_error ? stderr : stdout, "Usage: %s [OPTIONS] LOCAL_PORT:DEVICE_PORT [LOCAL_PORT2:DEVICE_PORT2 ...]\n", (name ? name+1 : argv[0]));
 	fprintf(is_error ? stderr : stdout,
-	  "Proxy that binds local TCP ports to be forwarded to the specified ports on a usbmux device.\n\n" \
-	  "OPTIONS:\n" \
-	  "  -u, --udid UDID    target specific device by UDID\n" \
-	  "  -n, --network      connect to network device\n" \
-	  "  -l, --local        connect to USB device (default)\n" \
-	  "  -s, --source ADDR  source address for listening socket (default 127.0.0.1)\n" \
-	  "  -h, --help         prints usage information\n" \
-	  "  -d, --debug        increase debug level\n" \
-	  "\n" \
-	  "Homepage: <" PACKAGE_URL ">\n"
-	  "Bug reports: <" PACKAGE_BUGREPORT ">\n"
-	  "\n"
+		"\n" \
+		"Proxy that binds local TCP ports to be forwarded to the specified ports on a usbmux device.\n" \
+		"\n" \
+		"OPTIONS:\n" \
+		"  -u, --udid UDID    target specific device by UDID\n" \
+		"  -n, --network      connect to network device\n" \
+		"  -l, --local        connect to USB device (default)\n" \
+		"  -s, --source ADDR  source address for listening socket (default 127.0.0.1)\n" \
+		"  -h, --help         prints usage information\n" \
+		"  -d, --debug        increase debug level\n" \
+		"\n" \
+		"Homepage:    <" PACKAGE_URL ">\n"
+		"Bug Reports: <" PACKAGE_BUGREPORT ">\n"
 	);
 }
 
