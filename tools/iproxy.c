@@ -124,17 +124,18 @@ static void *acceptor_thread(void *arg)
 
 	cdata->sfd = -1;
 	if (dev->conn_type == CONNECTION_TYPE_NETWORK) {
-		unsigned char saddr_[32];
-		memset(saddr_, '\0', sizeof(saddr_));
-		struct sockaddr* saddr = (struct sockaddr*)&saddr_[0];
+		struct sockaddr_storage saddr_storage;
+		struct sockaddr* saddr = (struct sockaddr*)&saddr_storage;
+
 		if (((char*)dev->conn_data)[1] == 0x02) { // AF_INET
 			saddr->sa_family = AF_INET;
-			memcpy(&saddr->sa_data[0], (char*)dev->conn_data+2, 14);
+			memcpy(&saddr->sa_data[0], (char*)dev->conn_data + 2, 14);
 		}
 		else if (((char*)dev->conn_data)[1] == 0x1E) { //AF_INET6 (bsd)
 #ifdef AF_INET6
 			saddr->sa_family = AF_INET6;
-			memcpy(&saddr->sa_data[0], (char*)dev->conn_data+2, 26);
+			/* copy the address and the host dependent scope id */
+			memcpy(&saddr->sa_data[0], (char*)dev->conn_data + 2, 26);
 #else
 			fprintf(stderr, "ERROR: Got an IPv6 address but this system doesn't support IPv6\n");
 			CDATA_FREE(cdata);
