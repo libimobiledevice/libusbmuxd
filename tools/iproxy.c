@@ -238,7 +238,16 @@ int main(int argc, char **argv)
 	char* source_addr = NULL;
 	uint16_t listen_port[16];
 	uint16_t device_port[16];
-	int listen_sock[16] = { -1, };
+#ifdef AF_INET6
+#define MAX_LISTEN_NUM 32
+#else
+#define MAX_LISTEN_NUM 16
+#endif
+	struct listen_sock {
+		int fd;
+		int index;
+	} listen_sock[MAX_LISTEN_NUM];
+	int num_listen = 0;
 	int num_pairs = 0;
 	int i = 0;
 	enum usbmux_lookup_options lookup_opts = 0;
@@ -347,6 +356,11 @@ int main(int argc, char **argv)
 		num_pairs = argc;
 	}
 
+	if (num_pairs > 16) {
+		fprintf(stderr, "ERROR: Too many LOCAL:DEVICE port pairs. Maximum is 16.\n");
+		return -1;
+	}
+
 #ifndef WIN32
 	signal(SIGPIPE, SIG_IGN);
 #endif
@@ -354,56 +368,89 @@ int main(int argc, char **argv)
 	// first create the listening sockets
 	for (i = 0; i < num_pairs; i++) {
 		printf("Creating listening port %d for device port %d\n", listen_port[i], device_port[i]);
-		listen_sock[i] = socket_create(source_addr, listen_port[i]);
-		if (listen_sock[i] < 0) {
-			int j;
-			fprintf(stderr, "Error creating socket for listen port %u: %s\n", listen_port[i], strerror(errno));
-			free(source_addr);
-			free(device_udid);
-			for (j = i; j >= 0; j--) {
-				socket_close(listen_sock[j]);
+		if (!source_addr) {
+			listen_sock[num_listen].fd = socket_create("127.0.0.1", listen_port[i]);
+			if (listen_sock[num_listen].fd < 0) {
+				int j;
+				fprintf(stderr, "Error creating socket for listen port %u: %s\n", listen_port[i], strerror(errno));
+				free(source_addr);
+				free(device_udid);
+				for (j = num_listen; j >= 0; j--) {
+					socket_close(listen_sock[j].fd);
+				}
+				return -errno;
 			}
-			return -errno;
+			listen_sock[num_listen].index = i;
+			num_listen++;
+#if defined(AF_INET6)
+			listen_sock[num_listen].fd = socket_create("::1", listen_port[i]);
+			if (listen_sock[num_listen].fd < 0) {
+				int j;
+				fprintf(stderr, "Error creating socket for listen port %u: %s\n", listen_port[i], strerror(errno));
+				free(source_addr);
+				free(device_udid);
+				for (j = num_listen; j >= 0; j--) {
+					socket_close(listen_sock[j].fd);
+				}
+				return -errno;
+			}
+			listen_sock[num_listen].index = i;
+			num_listen++;
+#endif
+		} else {
+			listen_sock[num_listen].fd = socket_create(source_addr, listen_port[i]);
+			if (listen_sock[num_listen].fd < 0) {
+				int j;
+				fprintf(stderr, "Error creating socket for listen port %u: %s\n", listen_port[i], strerror(errno));
+				free(source_addr);
+				free(device_udid);
+				for (j = num_listen; j >= 0; j--) {
+					socket_close(listen_sock[j].fd);
+				}
+				return -errno;
+			}
+			listen_sock[num_listen].index = i;
+			num_listen++;
 		}
 	}
 
 	// make them non-blocking and add them to fd set
 	fd_set fds;
 	FD_ZERO(&fds);
-	for (i = 0; i < num_pairs; i++) {
+	for (i = 0; i < num_listen; i++) {
 #ifdef WIN32
 		u_long l_yes = 1;
-		ioctlsocket(listen_sock[i], FIONBIO, &l_yes);
+		ioctlsocket(listen_sock[i].fd, FIONBIO, &l_yes);
 #else
-		int flags = fcntl(listen_sock[i], F_GETFL, 0);
-		fcntl(listen_sock[i], F_SETFL, flags | O_NONBLOCK);
+		int flags = fcntl(listen_sock[i].fd, F_GETFL, 0);
+		fcntl(listen_sock[i].fd, F_SETFL, flags | O_NONBLOCK);
 #endif
-		FD_SET(listen_sock[i], &fds);
+		FD_SET(listen_sock[i].fd, &fds);
 	}
 
 	// main loop
 	while (1) {
 		printf("waiting for connection\n");
 		fd_set read_fds = fds;
-		int ret_sel = select(listen_sock[num_pairs-1]+1, &read_fds, NULL, NULL, NULL);
+		int ret_sel = select(listen_sock[num_listen-1].fd+1, &read_fds, NULL, NULL, NULL);
 		if (ret_sel < 0) {
 			perror("select");
 			break;
 		}
-		for (i = 0; i < num_pairs; i++) {
-			if (FD_ISSET(listen_sock[i], &read_fds)) {
+		for (i = 0; i < num_listen; i++) {
+			if (FD_ISSET(listen_sock[i].fd, &read_fds)) {
 #ifdef WIN32
 				HANDLE acceptor = NULL;
 #else
 				pthread_t acceptor;
 #endif
 				struct client_data *cdata;
-				int c_sock = socket_accept(listen_sock[i], listen_port[i]);
+				int c_sock = socket_accept(listen_sock[i].fd, listen_port[listen_sock[i].index]);
 				if (c_sock < 0) {
 					fprintf(stderr, "accept: %s\n", strerror(errno));
 					break;
 				} else {
-					printf("New connection for %d->%d, fd = %d\n", listen_port[i], device_port[i], c_sock);
+					printf("New connection for %d->%d, fd = %d\n", listen_port[listen_sock[i].index], device_port[listen_sock[i].index], c_sock);
 					cdata = (struct client_data*)malloc(sizeof(struct client_data));
 					if (!cdata) {
 						socket_close(c_sock);
@@ -415,7 +462,7 @@ int main(int argc, char **argv)
 					cdata->sfd = -1;
 					cdata->udid = (device_udid) ? strdup(device_udid) : NULL;
 					cdata->lookup_opts = lookup_opts;
-					cdata->device_port = device_port[i];
+					cdata->device_port = device_port[listen_sock[i].index];
 #ifdef WIN32
 					acceptor = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)acceptor_thread, cdata, 0, NULL);
 					CloseHandle(acceptor);
@@ -428,8 +475,8 @@ int main(int argc, char **argv)
 		}
 	}
 
-	for (i = 0; i < num_pairs; i++) {
-		socket_close(listen_sock[i]);
+	for (i = 0; i < num_listen; i++) {
+		socket_close(listen_sock[i].fd);
 	}
 
 	free(device_udid);
