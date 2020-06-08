@@ -12,3 +12,6 @@ if WIN32
 libusbmuxd_la_LDFLAGS += -avoid-version -static-libgcc
 libusbmuxd_la_LIBADD += -lws2_32
 endif
+
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = libusbmuxd-2.0.pc
