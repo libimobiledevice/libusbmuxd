@@ -8,4 +8,4 @@ Description: A library to communicate with the usbmux daemon
 Version: @PACKAGE_VERSION@
 Libs: -L${libdir} -lusbmuxd
 Cflags: -I${includedir}
-Requires.private: libplist >= @LIBPLIST_VERSION@
+Requires.private: libplist-2.0 >= @LIBPLIST_VERSION@
