@@ -1,6 +1,6 @@
 # libusbmuxd
 
-*A client library for applications to handle usbmux protocol connections with iOS devices*
+*A client library for applications to handle usbmux protocol connections with iOS devices.*
 
 ## Features
 
@@ -18,6 +18,8 @@ The usbmuxd daemon is running upon installing iTunes on Windows and Mac OS X.
 The [libimobiledevice project](https://github.com/libimobiledevice/) provides an open-source reimplementation of
 the [usbmuxd daemon](https://github.com/libimobiledevice/usbmuxd.git/) to use on Linux or as an alternative to communicate with
 iOS devices without the need to install iTunes.
+
+Some key features are:
 
 - **Protocol:** Provides an interface to handle the usbmux protocol
 - **Port Proxy:** Provides the `iproxy` utility to proxy ports to the device
@@ -41,7 +43,8 @@ sudo apt-get install \
 	autoconf \
 	automake \
 	libtool-bin \
-	libplist-dev
+	libplist-dev \
+	usbmuxd
 ```
 
 Then clone the actual project repository:
@@ -128,7 +131,7 @@ that use the libusbmuxd library.
 This library is licensed under the [GNU Lesser General Public License v2.1](https://www.gnu.org/licenses/lgpl-2.1.en.html),
 also included in the repository in the `COPYING` file.
 
-This utilities `iproxy` and `inetcat` are licensed under the [GNU General Public License v2.0](https://www.gnu.org/licenses/gpl-2.0.en.html).
+The utilities `iproxy` and `inetcat` are licensed under the [GNU General Public License v2.0](https://www.gnu.org/licenses/gpl-2.0.en.html).
 
 ## Credits
 
