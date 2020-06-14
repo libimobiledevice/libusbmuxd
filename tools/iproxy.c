@@ -26,6 +26,9 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+
+#define TOOL_NAME "iproxy"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -227,6 +230,7 @@ static void print_usage(int argc, char **argv, int is_error)
 		"  -s, --source ADDR  source address for listening socket (default 127.0.0.1)\n" \
 		"  -h, --help         prints usage information\n" \
 		"  -d, --debug        increase debug level\n" \
+		"  -v, --version      prints version information\n" \
 		"\n" \
 		"Homepage:    <" PACKAGE_URL ">\n"
 		"Bug Reports: <" PACKAGE_BUGREPORT ">\n"
@@ -260,10 +264,11 @@ int main(int argc, char **argv)
 		{ "local", no_argument, NULL, 'l' },
 		{ "network", no_argument, NULL, 'n' },
 		{ "source", required_argument, NULL, 's' },
+		{ "version", no_argument, NULL, 'v' },
 		{ NULL, 0, NULL, 0}
 	};
 	int c = 0;
-	while ((c = getopt_long(argc, argv, "dhu:lns:", longopts, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "dhu:lns:v", longopts, NULL)) != -1) {
 		switch (c) {
 		case 'd':
 			libusbmuxd_set_debug_level(++debug_level);
@@ -294,6 +299,9 @@ int main(int argc, char **argv)
 			break;
 		case 'h':
 			print_usage(argc, argv, 0);
+			return 0;
+		case 'v':
+			printf("%s %s\n", TOOL_NAME, PACKAGE_VERSION);
 			return 0;
 		default:
 			print_usage(argc, argv, 1);
