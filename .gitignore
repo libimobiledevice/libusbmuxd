@@ -34,7 +34,7 @@ py-compile
 stamp-h1
 src/.libs
 docs/html
-libusbmuxd.pc
+libusbmuxd*.pc
 tools/.libs/*
 tools/iproxy
 tools/inetcat
