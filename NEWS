@@ -11,6 +11,14 @@ Version 2.0.2
   - Allow to map multiple ports in iproxy
   - Fix crash when no UDID is provided
   - Add man pages for iproxy and inetcat tools
+  - Improve `socket_create()` with proper use of getaddrinfo
+  - Allow proper listening on localhost for IPv6 and IPv4 in iproxy
+  - Bump dependency to libplist 2.2.0
+  - Add new "--version" argument to output version information to tools
+  - Improve README.md with project description, installation, contributing and
+    usage sections
+  - Rename library and all related files by adding an API version resulting
+    in "libusbmuxd-2.0"
 
 Version 2.0.1
 ~~~~~~~~~~~~~
