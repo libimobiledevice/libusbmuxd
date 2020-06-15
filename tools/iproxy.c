@@ -42,6 +42,7 @@
 #include <winsock2.h>
 typedef unsigned int socklen_t;
 #else
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <arpa/inet.h>
