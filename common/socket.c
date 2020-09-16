@@ -51,6 +51,7 @@ static int wsa_init = 0;
 #include "socket.h"
 
 #define RECV_TIMEOUT 20000
+#define SEND_TIMEOUT 10000
 #define CONNECT_TIMEOUT 5000
 
 #ifndef EAFNOSUPPORT
@@ -852,7 +853,7 @@ int socket_receive_timeout(int fd, void *data, size_t length, int flags,
 int socket_send(int fd, void *data, size_t length)
 {
 	int flags = 0;
-	int res = socket_check_fd(fd, FDM_WRITE, 1000);
+	int res = socket_check_fd(fd, FDM_WRITE, SEND_TIMEOUT);
 	if (res <= 0) {
 		return res;
 	}
