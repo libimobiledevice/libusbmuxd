@@ -12,5 +12,5 @@ libinternalcommon_la_SOURCES =			\
 	collection.h
 
 if WIN32
-libinternalcommon_la_LIBADD += -lws2_32
+libinternalcommon_la_LIBADD += -lws2_32 -lIphlpapi
 endif
