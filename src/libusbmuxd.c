@@ -1521,7 +1521,7 @@ retry:
 	}
 
 	tag = ++use_tag;
-	if (send_connect_packet(sfd, tag, (uint32_t)handle, (uint16_t)port) <= 0) {
+	if (send_connect_packet(sfd, tag, handle, (uint16_t)port) <= 0) {
 		LIBUSBMUXD_DEBUG(1, "%s: Error sending connect message!\n", __func__);
 	} else {
 		// read ACK
