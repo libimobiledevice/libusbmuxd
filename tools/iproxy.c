@@ -68,9 +68,9 @@ struct client_data {
 };
 
 #define CDATA_FREE(x) if (x) { \
-	if (x->fd > 0) socket_close(x->fd); \
-	if (x->sfd > 0) socket_close(x->sfd); \
-	free(x->udid); \
+	if ((x)->fd > 0) socket_close((x)->fd); \
+	if ((x)->sfd > 0) socket_close((x)->sfd); \
+	free((x)->udid); \
 	free(x); \
 }
 
