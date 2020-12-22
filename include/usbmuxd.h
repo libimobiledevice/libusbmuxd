@@ -99,7 +99,7 @@ typedef struct usbmuxd_subscription_context* usbmuxd_subscription_context_t;
  *
  * @return 0 on success or a negative errno value.
  */
-int usbmuxd_events_subscribe(usbmuxd_subscription_context_t *context, usbmuxd_event_cb_t callback, void *user_data);
+int usbmuxd_events_subscribe(usbmuxd_subscription_context_t *ctx, usbmuxd_event_cb_t callback, void *user_data);
 
 /**
  * Unsubscribe callback function
@@ -108,7 +108,7 @@ int usbmuxd_events_subscribe(usbmuxd_subscription_context_t *context, usbmuxd_ev
  *
  * @return 0 on success or a negative errno value.
  */
-int usbmuxd_events_unsubscribe(usbmuxd_subscription_context_t context);
+int usbmuxd_events_unsubscribe(usbmuxd_subscription_context_t ctx);
 
 /**
  * Subscribe a callback (deprecated)
