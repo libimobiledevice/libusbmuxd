@@ -76,7 +76,7 @@ int collection_remove(struct collection *col, void *element)
 			return 0;
 		}
 	}
-	fprintf(stderr, "%s: WARNING: element %p not present in collection %p (cap %d)", __func__, element, col, col->capacity);
+	fprintf(stderr, "%s: WARNING: element %p not present in collection %p (cap %d)", __func__, element, (void *)col, col->capacity);
 	return -1;
 }
 
