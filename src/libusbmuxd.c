@@ -23,10 +23,10 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-#include <stdint.h>
-#include <stdlib.h>
 #include <errno.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #ifdef WIN32
@@ -49,8 +49,8 @@
 #define ECONNREFUSED 107
 #endif
 
-#include <unistd.h>
 #include <signal.h>
+#include <unistd.h>
 
 #ifdef WIN32
 #include <winsock2.h>
@@ -59,9 +59,9 @@
 #define sleep(x) Sleep(x*1000)
 #endif
 #else
-#include <sys/socket.h>
 #include <arpa/inet.h>
 #include <pthread.h>
+#include <sys/socket.h>
 #if defined(HAVE_PROGRAM_INVOCATION_SHORT_NAME) && !defined(HAVE_PROGRAM_INVOCATION_SHORT_NAME_ERRNO_H)
 extern char *program_invocation_short_name;
 #endif

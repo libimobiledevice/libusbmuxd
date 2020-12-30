@@ -22,14 +22,14 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-#include <stdio.h>
+#include <errno.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <errno.h>
-#include <sys/time.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+#include <unistd.h>
 #ifdef WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -45,16 +45,16 @@ static int wsa_init = 0;
 #define AI_NUMERICSERV 0
 #endif
 #else
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <netdb.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #ifdef AF_INET6
-#include <net/if.h>
 #include <ifaddrs.h>
+#include <net/if.h>
 #endif
 #endif
 #include "socket.h"

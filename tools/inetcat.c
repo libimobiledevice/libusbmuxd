@@ -27,24 +27,24 @@
 
 #define TOOL_NAME "inetcat"
 
+#include <errno.h>
+#include <fcntl.h>
+#include <getopt.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
-#include <fcntl.h>
-#include <stddef.h>
 #include <unistd.h>
-#include <errno.h>
-#include <getopt.h>
 #ifdef WIN32
 #include <windows.h>
 #include <winsock2.h>
 #else
+#include <signal.h>
+#include <sys/ioctl.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <sys/ioctl.h>
-#include <signal.h>
 #endif
 
 #include "usbmuxd.h"
