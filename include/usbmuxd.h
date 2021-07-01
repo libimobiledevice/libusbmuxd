@@ -29,14 +29,14 @@ extern "C" {
 #endif
 
 /** Device lookup options for usbmuxd_get_device. */
-enum usbmux_lookup_options {
+enum usbmux_lookup_options : uint32_t {
 	DEVICE_LOOKUP_USBMUX = 1 << 1, /**< include USBMUX devices during lookup */
 	DEVICE_LOOKUP_NETWORK = 1 << 2, /**< include network devices during lookup */
 	DEVICE_LOOKUP_PREFER_NETWORK = 1 << 3 /**< prefer network connection if device is available via USBMUX *and* network */
 };
 
 /** Type of connection a device is available on */
-enum usbmux_connection_type {
+enum usbmux_connection_type : uint32_t {
 	CONNECTION_TYPE_USB = 1,
 	CONNECTION_TYPE_NETWORK
 };
@@ -58,7 +58,7 @@ typedef struct {
 /**
  * event types for event callback function
  */
-enum usbmuxd_event_type {
+enum usbmuxd_event_type : uint32_t {
     UE_DEVICE_ADD = 1,
     UE_DEVICE_REMOVE,
     UE_DEVICE_PAIRED
