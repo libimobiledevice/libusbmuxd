@@ -23,10 +23,10 @@
 #include <config.h>
 #endif
 
+#include "collection.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
-#include "collection.h"
 
 #undef NDEBUG // we need to make sure we still get assertions because we can't handle memory allocation errors
 #include <assert.h>

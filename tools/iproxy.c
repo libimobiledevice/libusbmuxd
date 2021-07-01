@@ -29,26 +29,26 @@
 
 #define TOOL_NAME "iproxy"
 
+#include <errno.h>
+#include <fcntl.h>
+#include <getopt.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fcntl.h>
-#include <stddef.h>
 #include <unistd.h>
-#include <errno.h>
-#include <getopt.h>
 #ifdef WIN32
 #include <winsock2.h>
 #include <windows.h>
 typedef unsigned int socklen_t;
 #else
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <pthread.h>
+#include <signal.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <arpa/inet.h>
-#include <pthread.h>
-#include <netinet/in.h>
-#include <signal.h>
 #endif
 #include "socket.h"
 #include "usbmuxd.h"
