@@ -720,10 +720,12 @@ static int32_t _sockaddr_in6_scope_id(struct sockaddr_in6* addr)
 			continue;
 		}
 
+#ifndef __HAIKU__
 		/* skip if not running */
 		if ((ifa->ifa_flags & IFF_RUNNING) == 0) {
 			continue;
 		}
+#endif
 
 		struct sockaddr_in6* addr_in = (struct sockaddr_in6*)ifa->ifa_addr;
 
