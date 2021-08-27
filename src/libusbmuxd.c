@@ -1368,7 +1368,7 @@ retry:
 			free(payload);
 		} else {
 			// we _should_ have all of them now.
-			// or perhaps an error occured.
+			// or perhaps an error occurred.
 			break;
 		}
 	}
