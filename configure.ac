@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.61)
+AC_PREREQ(2.68)
 AC_INIT(libusbmuxd, 2.0.3, [https://github.com/libimobiledevice/libusbmuxd/issues],, [https://libimobiledevice.org])
 AM_INIT_AUTOMAKE([dist-bzip2 no-dist-gzip check-news])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
@@ -24,13 +24,11 @@ LIBPLIST_VERSION=2.2.0
 AC_SUBST(LIBUSBMUXD_SO_VERSION)
 AC_SUBST(LIBPLIST_VERSION)
 
-AC_GNU_SOURCE
-
 # Checks for programs.
 AC_PROG_CC
-AC_PROG_CXX
+#AC_PROG_CXX
 AM_PROG_CC_C_O
-AC_PROG_LIBTOOL
+LT_INIT
 
 # Checks for libraries.
 PKG_CHECK_MODULES(libplist, libplist-2.0 >= $LIBPLIST_VERSION)
@@ -52,7 +50,6 @@ if test "x$have_inotify" = "xyes"; then
 fi
 
 # Checks for header files.
-AC_HEADER_STDC
 AC_CHECK_HEADERS([stdint.h stdlib.h string.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
@@ -87,7 +84,7 @@ case ${host_os} in
     ])
     AC_CHECK_FUNCS([pselect])
     AC_CACHE_CHECK(for program_invocation_short_name, ac_cv_program_invocation_short_name,[
-        AC_TRY_LINK([extern char* program_invocation_short_name;],[return program_invocation_short_name;],
+        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([extern char* program_invocation_short_name;],[return program_invocation_short_name;])],
             [ac_cv_program_invocation_short_name=yes],
             [ac_cv_program_invocation_short_name=no]
         )
@@ -95,7 +92,7 @@ case ${host_os} in
     if test "x$ac_cv_program_invocation_short_name" = "xyes"; then
         AC_DEFINE(HAVE_PROGRAM_INVOCATION_SHORT_NAME, 1, [Define if you have program_invocation_short_name])
         AC_CACHE_CHECK(if program_invocation_short_name is declared in errno.h, ac_cv_program_invocation_short_name_errno_h,[
-            AC_TRY_LINK([#include <errno.h>],[return program_invocation_short_name;],
+            AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <errno.h>],[return program_invocation_short_name;])],
                 [ac_cv_program_invocation_short_name_errno_h=yes],
                 [ac_cv_program_invocation_short_name_errno_h=no]
             )
@@ -120,7 +117,7 @@ esac
 
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
 
-AC_OUTPUT([
+AC_CONFIG_FILES([
 Makefile
 common/Makefile
 src/Makefile
@@ -129,6 +126,7 @@ tools/Makefile
 docs/Makefile
 src/libusbmuxd-2.0.pc
 ])
+AC_OUTPUT
 
 echo "
 Configuration for $PACKAGE $VERSION:
