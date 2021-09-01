@@ -20,9 +20,11 @@ LIBUSBMUXD_SO_VERSION=6:0:0
 
 dnl Minimum package versions
 LIBPLIST_VERSION=2.2.0
+LIMD_GLUE_VERSION=1.0.0
 
 AC_SUBST(LIBUSBMUXD_SO_VERSION)
 AC_SUBST(LIBPLIST_VERSION)
+AC_SUBST(LIMD_GLUE_VERSION)
 
 # Checks for programs.
 AC_PROG_CC
@@ -32,6 +34,7 @@ LT_INIT
 
 # Checks for libraries.
 PKG_CHECK_MODULES(libplist, libplist-2.0 >= $LIBPLIST_VERSION)
+PKG_CHECK_MODULES(limd_glue, libimobiledevice-glue-1.0 >= $LIMD_GLUE_VERSION)
 AC_CHECK_HEADERS([sys/inotify.h], have_inotify=yes, have_inotify=no)
 
 AC_ARG_WITH([inotify],
@@ -73,16 +76,18 @@ case ${host_os} in
     ;;
   darwin*)
     AC_MSG_RESULT([${host_os}])
-    AX_PTHREAD([], [AC_MSG_ERROR([pthread is required to build $PACKAGE])])
-    AC_CHECK_FUNCS([pthread_cancel])
     ;;
   *)
     AC_MSG_RESULT([${host_os}])
-    AX_PTHREAD([], [AC_MSG_ERROR([pthread is required to build $PACKAGE])])
-    AC_CHECK_FUNC(pthread_cancel, [AC_DEFINE(HAVE_PTHREAD_CANCEL)], [
-        AC_CHECK_LIB(pthread, [pthread_cancel],[AC_DEFINE(HAVE_PTHREAD_CANCEL)])
-    ])
-    AC_CHECK_FUNCS([pselect])
+    if test "x$have_inotify" = "xyes"; then
+      AC_CHECK_FUNCS([pselect])
+      AC_CHECK_FUNC(pthread_cancel, [AC_DEFINE(HAVE_PTHREAD_CANCEL, 1, [Define if you have pthread_cancel])], [
+        AC_CHECK_LIB(pthread, [pthread_cancel],[AC_DEFINE(HAVE_PTHREAD_CANCEL, 1, [Define if you have pthread_cancel])])
+      ])
+      if test "$ac_cv_func_pselect" != "yes" || test "$ac_cv_func_pthread_cancel" != "yes" -a "$ac_cv_lib_pthread_pthread_cancel" != "yes"; then
+        AX_PTHREAD([], [AC_MSG_ERROR([pthread is required to build $PACKAGE with inotify support])])
+      fi
+    fi
     AC_CACHE_CHECK(for program_invocation_short_name, ac_cv_program_invocation_short_name,[
         AC_COMPILE_IFELSE([AC_LANG_PROGRAM([extern char* program_invocation_short_name;],[return program_invocation_short_name;])],
             [ac_cv_program_invocation_short_name=yes],
@@ -119,7 +124,6 @@ m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
 
 AC_CONFIG_FILES([
 Makefile
-common/Makefile
 src/Makefile
 include/Makefile
 tools/Makefile

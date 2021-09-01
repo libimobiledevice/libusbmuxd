@@ -48,7 +48,7 @@
 #endif
 
 #include "usbmuxd.h"
-#include "socket.h"
+#include <libimobiledevice-glue/socket.h>
 
 static int debug_level = 0;
 

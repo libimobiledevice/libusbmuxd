@@ -44,13 +44,10 @@ typedef unsigned int socklen_t;
 #else
 #include <sys/select.h>
 #include <sys/socket.h>
-#include <sys/un.h>
-#include <arpa/inet.h>
-#include <pthread.h>
-#include <netinet/in.h>
 #include <signal.h>
 #endif
-#include "socket.h"
+#include <libimobiledevice-glue/socket.h>
+#include <libimobiledevice-glue/thread.h>
 #include "usbmuxd.h"
 
 #ifndef ETIMEDOUT
@@ -450,11 +447,7 @@ int main(int argc, char **argv)
 		}
 		for (i = 0; i < num_listen; i++) {
 			if (FD_ISSET(listen_sock[i].fd, &read_fds)) {
-#ifdef WIN32
-				HANDLE acceptor = NULL;
-#else
-				pthread_t acceptor;
-#endif
+				THREAD_T acceptor = THREAD_T_NULL;
 				struct client_data *cdata;
 				int c_sock = socket_accept(listen_sock[i].fd, listen_port[listen_sock[i].index]);
 				if (c_sock < 0) {
@@ -474,13 +467,12 @@ int main(int argc, char **argv)
 				cdata->udid = (device_udid) ? strdup(device_udid) : NULL;
 				cdata->lookup_opts = lookup_opts;
 				cdata->device_port = device_port[listen_sock[i].index];
-#ifdef WIN32
-				acceptor = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)acceptor_thread, cdata, 0, NULL);
-				CloseHandle(acceptor);
-#else
-				pthread_create(&acceptor, NULL, acceptor_thread, cdata);
-				pthread_detach(acceptor);
-#endif
+
+				if (thread_new(&acceptor, acceptor_thread, cdata) == 0) {
+					thread_detach(acceptor);
+				} else {
+					fprintf(stderr, "ERROR: Failed to created acceptor thread!\n");
+				}
 			}
 		}
 	}

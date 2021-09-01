@@ -61,7 +61,6 @@
 #else
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include <pthread.h>
 #if defined(HAVE_PROGRAM_INVOCATION_SHORT_NAME) && !defined(HAVE_PROGRAM_INVOCATION_SHORT_NAME_ERRNO_H)
 extern char *program_invocation_short_name;
 #endif
@@ -74,6 +73,7 @@ extern int _NSGetExecutablePath(char* buf, uint32_t* bufsize);
 #ifdef HAVE_INOTIFY
 #include <sys/inotify.h>
 #include <sys/select.h>
+#include <pthread.h>
 #define EVENT_SIZE  (sizeof (struct inotify_event))
 #define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 16))
 #define USBMUXD_DIRNAME "/var/run"
@@ -103,11 +103,11 @@ static char *prog_name = NULL;
 // usbmuxd protocol
 #include "usbmuxd-proto.h"
 // socket utility functions
-#include "socket.h"
+#include <libimobiledevice-glue/socket.h>
 // misc utility functions
-#include "collection.h"
+#include <libimobiledevice-glue/collection.h>
 // threads
-#include "thread.h"
+#include <libimobiledevice-glue/thread.h>
 
 static int libusbmuxd_debug = 0;
 #ifndef PACKAGE
