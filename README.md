@@ -2,6 +2,8 @@
 
 *A client library for applications to handle usbmux protocol connections with iOS devices.*
 
+![](https://github.com/libimobiledevice/libusbmuxd/actions/workflows/build.yml/badge.svg)
+
 ## Features
 
 This project is a client library to multiplex connections from and to iOS
