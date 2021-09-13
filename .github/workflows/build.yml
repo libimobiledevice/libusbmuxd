@@ -83,7 +83,17 @@ jobs:
     - uses: actions/checkout@v2
     - name: autogen
       run: |
-          ./autogen.sh PKG_CONFIG_PATH=/usr/local/lib/pkgconfig \
+          SDKDIR=`xcrun --sdk macosx --show-sdk-path`
+          TESTARCHS="arm64 x86_64"
+          USEARCHS=
+          for ARCH in $TESTARCHS; do
+            if echo "int main(int argc, char **argv) { return 0; }" |clang -arch $ARCH -o /dev/null -isysroot $SDKDIR -x c - 2>/dev/null; then
+              USEARCHS="$USEARCHS -arch $ARCH"
+            fi
+          done
+          export CFLAGS="$USEARCHS -isysroot $SDKDIR"
+          echo "Using CFLAGS: $CFLAGS"
+          ./autogen.sh PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
     - name: make
       run: make
     - name: make install
