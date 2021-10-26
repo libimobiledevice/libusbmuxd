@@ -239,6 +239,7 @@ static void sanitize_udid(usbmuxd_device_info_t *devinfo)
 
 static usbmuxd_device_info_t *device_info_from_plist(plist_t props)
 {
+	unsigned char win_prefix[4] = {0x02, 0, 0, 0};
 	usbmuxd_device_info_t* devinfo = NULL;
 	plist_t n = NULL;
 	uint64_t val = 0;
@@ -286,7 +287,17 @@ static usbmuxd_device_info_t *device_info_from_plist(plist_t props)
 					uint64_t addr_len = 0;
 					plist_get_data_val(n, &netaddr, &addr_len);
 					if (netaddr && addr_len > 0 && addr_len < sizeof(devinfo->conn_data)) {
+#if defined(_WIN32)
+						if(addr_len >= 8 && 0 == memcmp(win_prefix, netaddr, 4)){
+							devinfo->conn_data[0] = addr_len;
+							memcpy(devinfo->conn_data + 1, netaddr, 3);
+							memcpy(devinfo->conn_data + 4, netaddr + 4, 4);
+						}else{
+							memcpy(devinfo->conn_data, netaddr, addr_len);
+						}
+#else
 						memcpy(devinfo->conn_data, netaddr, addr_len);
+#endif
 					}
 					free(netaddr);
 				}
