@@ -216,14 +216,14 @@ int main(int argc, char **argv)
         unsigned char saddr_[32];
         memset(saddr_, '\0', sizeof(saddr_));
         struct sockaddr* saddr = (struct sockaddr*)&saddr_[0];
-        if (((char*)dev->conn_data)[1] == 0x02) { // AF_INET
+        if (dev->conn_data[1] == 0x02) { // AF_INET
             saddr->sa_family = AF_INET;
-            memcpy(&saddr->sa_data[0], (char*)dev->conn_data+2, 14);
+            memcpy(&saddr->sa_data[0], (uint8_t*)dev->conn_data+2, 14);
         }
-        else if (((char*)dev->conn_data)[1] == 0x1E) { //AF_INET6 (bsd)
+        else if (dev->conn_data[1] == 0x1E) { //AF_INET6 (bsd)
 #ifdef AF_INET6
             saddr->sa_family = AF_INET6;
-            memcpy(&saddr->sa_data[0], (char*)dev->conn_data+2, 26);
+            memcpy(&saddr->sa_data[0], (uint8_t*)dev->conn_data+2, 26);
 #else
             fprintf(stderr, "ERROR: Got an IPv6 address but this system doesn't support IPv6\n");
             free(dev_list);
@@ -231,7 +231,7 @@ int main(int argc, char **argv)
 #endif
         }
         else {
-            fprintf(stderr, "Unsupported address family 0x%02x\n", ((char*)dev->conn_data)[1]);
+            fprintf(stderr, "Unsupported address family 0x%02x\n", dev->conn_data[1]);
             free(dev_list);
             return 1;
         }

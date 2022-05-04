@@ -52,7 +52,7 @@ typedef struct {
 	uint32_t product_id;
 	char udid[44];
 	enum usbmux_connection_type conn_type;
-	char conn_data[200];
+	uint8_t conn_data[200];
 } usbmuxd_device_info_t;
 
 /**
