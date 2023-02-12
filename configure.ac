@@ -94,7 +94,7 @@ case ${host_os} in
       fi
     fi
     AC_CACHE_CHECK(for program_invocation_short_name, ac_cv_program_invocation_short_name,[
-        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([extern char* program_invocation_short_name;],[return program_invocation_short_name;])],
+        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([extern char* program_invocation_short_name;],[return program_invocation_short_name[0];])],
             [ac_cv_program_invocation_short_name=yes],
             [ac_cv_program_invocation_short_name=no]
         )
@@ -102,7 +102,7 @@ case ${host_os} in
     if test "x$ac_cv_program_invocation_short_name" = "xyes"; then
         AC_DEFINE(HAVE_PROGRAM_INVOCATION_SHORT_NAME, 1, [Define if you have program_invocation_short_name])
         AC_CACHE_CHECK(if program_invocation_short_name is declared in errno.h, ac_cv_program_invocation_short_name_errno_h,[
-            AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <errno.h>],[return program_invocation_short_name;])],
+            AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <errno.h>],[return program_invocation_short_name[0];])],
                 [ac_cv_program_invocation_short_name_errno_h=yes],
                 [ac_cv_program_invocation_short_name_errno_h=no]
             )
