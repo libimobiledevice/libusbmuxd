@@ -701,11 +701,11 @@ static void get_prog_name()
 	size_t r = fread(tmpbuf, 1, 512, f);
 	if (r > 0) {
 		char *p = tmpbuf;
-		while ((p-tmpbuf < r) && (*p != '(') && (*p != '\0')) p++;
+		while (((size_t)(p-tmpbuf) < r) && (*p != '(') && (*p != '\0')) p++;
 		if (*p == '(') {
 			p++;
 			char *pname = p;
-			while ((p-tmpbuf < r) && (*p != ')') && (*p != '\0')) p++;
+			while (((size_t)(p-tmpbuf) < r) && (*p != ')') && (*p != '\0')) p++;
 			if (*p == ')') {
 				*p = '\0';
 				prog_name = strdup(pname);
