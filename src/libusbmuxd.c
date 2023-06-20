@@ -282,13 +282,11 @@ static usbmuxd_device_info_t *device_info_from_plist(plist_t props)
 				devinfo->conn_type = CONNECTION_TYPE_NETWORK;
 				n = plist_dict_get_item(props, "NetworkAddress");
 				if (n && plist_get_node_type(n) == PLIST_DATA) {
-					char *netaddr = NULL;
 					uint64_t addr_len = 0;
-					plist_get_data_val(n, &netaddr, &addr_len);
+					const char *netaddr = plist_get_data_ptr(n, &addr_len);
 					if (netaddr && addr_len > 0 && addr_len < sizeof(devinfo->conn_data)) {
 						memcpy(devinfo->conn_data, netaddr, addr_len);
 					}
-					free(netaddr);
 				}
 			} else {
 				LIBUSBMUXD_ERROR("%s: Unexpected ConnectionType '%s'\n", __func__, strval);
