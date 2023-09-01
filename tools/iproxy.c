@@ -154,10 +154,10 @@ static void *acceptor_thread(void *arg)
 		if (!socket_addr_to_string(saddr, addrtxt, sizeof(addrtxt))) {
 			fprintf(stderr, "Failed to convert network address: %d (%s)\n", errno, strerror(errno));
 		}
-		fprintf(stdout, "Requesting connecion to NETWORK device %s (serial: %s), port %d\n", addrtxt, dev->udid, cdata->device_port);
+		fprintf(stdout, "Requesting connection to NETWORK device %s (serial: %s), port %d\n", addrtxt, dev->udid, cdata->device_port);
 		cdata->sfd = socket_connect_addr(saddr, cdata->device_port);
 	} else if (dev->conn_type == CONNECTION_TYPE_USB) {
-		fprintf(stdout, "Requesting connecion to USB device handle %d (serial: %s), port %d\n", dev->handle, dev->udid, cdata->device_port);
+		fprintf(stdout, "Requesting connection to USB device handle %d (serial: %s), port %d\n", dev->handle, dev->udid, cdata->device_port);
 
 		cdata->sfd = usbmuxd_connect(dev->handle, cdata->device_port);
 	}
