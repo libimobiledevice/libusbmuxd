@@ -916,7 +916,7 @@ static int usbmuxd_listen_inotify()
 		return sfd;
 
 	sfd = -1;
-	inot_fd = inotify_init ();
+	inot_fd = inotify_init1(IN_CLOEXEC);
 	if (inot_fd < 0) {
 		LIBUSBMUXD_DEBUG(1, "%s: Failed to setup inotify\n", __func__);
 		return -2;
