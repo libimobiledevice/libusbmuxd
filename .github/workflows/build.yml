@@ -1,6 +1,9 @@
 name: build
 
-on: [push]
+on:
+  push:
+  schedule:
+    - cron: '0 0 1 * *'
 
 jobs:
   build-linux-ubuntu:
@@ -31,7 +34,7 @@ jobs:
           done
           sudo cp -r extract/* /
           sudo ldconfig
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: autogen
       run: ./autogen.sh PKG_CONFIG_PATH=/usr/local/lib/pkgconfig LDFLAGS="-Wl,-rpath=/usr/local/lib"
     - name: make
@@ -44,7 +47,7 @@ jobs:
           DESTDIR=`pwd`/dest make install
           tar -C dest -cf libusbmuxd.tar usr
     - name: publish artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: libusbmuxd-latest_${{env.target_triplet}}
         path: libusbmuxd.tar
@@ -80,7 +83,7 @@ jobs:
             tar -C extract -xvf $I
           done
           sudo cp -r extract/* /
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: autogen
       run: |
           SDKDIR=`xcrun --sdk macosx --show-sdk-path`
@@ -104,7 +107,7 @@ jobs:
           DESTDIR=`pwd`/dest make install
           tar -C dest -cf libusbmuxd.tar usr
     - name: publish artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: libusbmuxd-latest_macOS
         path: libusbmuxd.tar
@@ -161,7 +164,7 @@ jobs:
             tar -C extract -xvf $I
           done
           cp -r extract/* /
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: autogen
       run: ./autogen.sh CC=gcc CXX=g++
     - name: make
@@ -174,7 +177,7 @@ jobs:
           DESTDIR=`pwd`/dest make install
           tar -C dest -cf libusbmuxd.tar ${{ env.dest }}
     - name: publish artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: libusbmuxd-latest_${{ matrix.arch }}-${{ env.dest }}
         path: libusbmuxd.tar

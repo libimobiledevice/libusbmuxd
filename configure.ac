@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.68)
-AC_INIT(libusbmuxd, [m4_esyscmd(./git-version-gen $RELEASE_VERSION)], [https://github.com/libimobiledevice/libusbmuxd/issues],, [https://libimobiledevice.org])
+AC_INIT(libusbmuxd, [m4_esyscmd(./git-version-gen $RELEASE_VERSION)], [https://github.com/libimobiledevice/libusbmuxd/issues], [], [https://libimobiledevice.org])
 AM_INIT_AUTOMAKE([dist-bzip2 no-dist-gzip check-news])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
 AC_CONFIG_SRCDIR([src/])
@@ -94,7 +94,7 @@ case ${host_os} in
       fi
     fi
     AC_CACHE_CHECK(for program_invocation_short_name, ac_cv_program_invocation_short_name,[
-        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([extern char* program_invocation_short_name;],[return program_invocation_short_name;])],
+        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([extern char* program_invocation_short_name;],[return program_invocation_short_name[0];])],
             [ac_cv_program_invocation_short_name=yes],
             [ac_cv_program_invocation_short_name=no]
         )
@@ -102,7 +102,7 @@ case ${host_os} in
     if test "x$ac_cv_program_invocation_short_name" = "xyes"; then
         AC_DEFINE(HAVE_PROGRAM_INVOCATION_SHORT_NAME, 1, [Define if you have program_invocation_short_name])
         AC_CACHE_CHECK(if program_invocation_short_name is declared in errno.h, ac_cv_program_invocation_short_name_errno_h,[
-            AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <errno.h>],[return program_invocation_short_name;])],
+            AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <errno.h>],[return program_invocation_short_name[0];])],
                 [ac_cv_program_invocation_short_name_errno_h=yes],
                 [ac_cv_program_invocation_short_name_errno_h=no]
             )
@@ -117,13 +117,13 @@ AM_CONDITIONAL(WIN32, test x$win32 = xtrue)
 
 AS_COMPILER_FLAGS(GLOBAL_CFLAGS, "-Wall -Wextra -Wmissing-declarations -Wredundant-decls -Wshadow -Wpointer-arith -Wwrite-strings -Wswitch-default -Wno-unused-parameter -fvisibility=hidden $PTHREAD_CFLAGS")
 GLOBAL_LDFLAGS="$PTHREAD_LIBS"
+
+if test "x$enable_static" = "xyes" -a "x$enable_shared" = "xno"; then
+  GLOBAL_CFLAGS+=" -DLIBUSBMUXD_STATIC"
+fi
+
 AC_SUBST(GLOBAL_CFLAGS)
 AC_SUBST(GLOBAL_LDFLAGS)
-
-case "$GLOBAL_CFLAGS" in
-    *-fvisibility=hidden*)
-        AC_DEFINE([HAVE_FVISIBILITY], [1], [Define if compiled with -fvisibility=hidden])
-esac
 
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
 
