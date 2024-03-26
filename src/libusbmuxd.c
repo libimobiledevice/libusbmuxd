@@ -1803,3 +1803,11 @@ void libusbmuxd_set_debug_level(int level)
 	libusbmuxd_debug = level;
 	socket_set_verbose(level);
 }
+
+const char* libusbmuxd_version()
+{
+#ifndef PACKAGE_VERSION
+#error PACKAGE_VERSION is not defined
+#endif
+	return PACKAGE_VERSION;
+}

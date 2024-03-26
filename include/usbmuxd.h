@@ -334,6 +334,13 @@ USBMUXD_API void libusbmuxd_set_use_inotify(int set);
 
 USBMUXD_API void libusbmuxd_set_debug_level(int level);
 
+/**
+ * Returns a static string of the libusbmuxd version.
+ *
+ * @return The libusbmuxd version as static ascii string
+ */
+USBMUXD_API const char* libusbmuxd_version();
+
 #ifdef __cplusplus
 }
 #endif
