@@ -377,7 +377,7 @@ int main(int argc, char **argv)
 	for (i = 0; i < num_pairs; i++) {
 		printf("Creating listening port %d for device port %d\n", listen_port[i], device_port[i]);
 		if (!source_addr) {
-			listen_sock[num_listen].fd = socket_create("127.0.0.1", listen_port[i]);
+			listen_sock[num_listen].fd = socket_create(NULL, listen_port[i]);
 			if (listen_sock[num_listen].fd < 0) {
 				int j;
 				fprintf(stderr, "Error creating socket for listen port %u: %s\n", listen_port[i], strerror(errno));
@@ -390,21 +390,6 @@ int main(int argc, char **argv)
 			}
 			listen_sock[num_listen].index = i;
 			num_listen++;
-#if defined(AF_INET6)
-			listen_sock[num_listen].fd = socket_create("::1", listen_port[i]);
-			if (listen_sock[num_listen].fd < 0) {
-				int j;
-				fprintf(stderr, "Error creating socket for listen port %u: %s\n", listen_port[i], strerror(errno));
-				free(source_addr);
-				free(device_udid);
-				for (j = num_listen; j >= 0; j--) {
-					socket_close(listen_sock[j].fd);
-				}
-				return -errno;
-			}
-			listen_sock[num_listen].index = i;
-			num_listen++;
-#endif
 		} else {
 			listen_sock[num_listen].fd = socket_create(source_addr, listen_port[i]);
 			if (listen_sock[num_listen].fd < 0) {
