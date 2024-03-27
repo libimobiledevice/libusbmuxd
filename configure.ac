@@ -15,7 +15,7 @@ dnl libtool versioning
 #                 changes to the signature and the semantic)
 #  ? :+1 : ?   == just internal changes
 # CURRENT : REVISION : AGE
-LIBUSBMUXD_SO_VERSION=6:0:0
+LIBUSBMUXD_SO_VERSION=7:0:0
 
 AC_SUBST(LIBUSBMUXD_SO_VERSION)
 
