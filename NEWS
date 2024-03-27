@@ -1,3 +1,13 @@
+Version 2.1.0
+~~~~~~~~~~~~~
+
+* Changes:
+  - Socket code has been moved to libimobiledevice-glue library
+  - Code cleanup (clang-tidy) and improvements
+  - autoconf: Fix clang-16 breakage
+  - Add libusbmuxd_version() function to interface
+  - iproxy: Use updated socket_create API to listen on IPv4 and IPv6 with a single socket
+
 Version 2.0.2
 ~~~~~~~~~~~~~
 
