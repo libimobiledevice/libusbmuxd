@@ -1593,7 +1593,7 @@ int usbmuxd_send(int sfd, const char *data, uint32_t len, uint32_t *sent_bytes)
 	if (num_sent < 0) {
 		*sent_bytes = 0;
 		LIBUSBMUXD_DEBUG(1, "%s: Error %d when sending: %s\n", __func__, -num_sent, strerror(-num_sent));
-		return -num_sent;
+		return num_sent;
 	}
 
 	if ((uint32_t)num_sent < len) {
