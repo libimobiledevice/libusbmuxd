@@ -1,0 +1,4 @@
+option('tools', type : 'boolean',
+  value : true,
+  description : 'Build libusbmuxd utilities',
+)
