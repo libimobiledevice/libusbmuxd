@@ -172,7 +172,8 @@ static void *acceptor_thread(void *arg)
 
 		while (1) {
 			fd_set read_fds = fds;
-			int ret_sel = select(cdata->sfd+1, &read_fds, NULL, NULL, NULL);
+			int max_fd = cdata->fd > cdata->sfd ? cdata->fd : cdata->sfd;
+			int ret_sel = select(max_fd+1, &read_fds, NULL, NULL, NULL);
 			if (ret_sel < 0) {
 				perror("select");
 				break;
