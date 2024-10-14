@@ -169,10 +169,11 @@ static void *acceptor_thread(void *arg)
 		FD_ZERO(&fds);
 		FD_SET(cdata->fd, &fds);
 		FD_SET(cdata->sfd, &fds);
+		int maxfd = cdata->fd > cdata->sfd ? cdata->fd : cdata->sfd;
 
 		while (1) {
 			fd_set read_fds = fds;
-			int ret_sel = select(cdata->sfd+1, &read_fds, NULL, NULL, NULL);
+			int ret_sel = select(maxfd+1, &read_fds, NULL, NULL, NULL);
 			if (ret_sel < 0) {
 				perror("select");
 				break;
