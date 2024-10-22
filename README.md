@@ -258,8 +258,8 @@ Please make sure your contribution adheres to:
 ## Links
 
 * Homepage: https://libimobiledevice.org/
-* Repository: https://git.libimobiledevice.org/libusbmuxd.git
-* Repository (Mirror): https://github.com/libimobiledevice/libusbmuxd.git
+* Repository: https://github.com/libimobiledevice/libusbmuxd.git
+* Repository (Mirror): https://git.libimobiledevice.org/libusbmuxd.git
 * Issue Tracker: https://github.com/libimobiledevice/libusbmuxd/issues
 * Mailing List: https://lists.libimobiledevice.org/mailman/listinfo/libimobiledevice-devel
 * Twitter: https://twitter.com/libimobiledev
@@ -279,4 +279,4 @@ iPadOS, tvOS, watchOS, and macOS are trademarks of Apple Inc.
 This project is an independent software library and has not been authorized,
 sponsored, or otherwise approved by Apple Inc.
 
-README Updated on: 2024-03-27
+README Updated on: 2024-10-22
