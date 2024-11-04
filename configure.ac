@@ -119,7 +119,7 @@ AS_COMPILER_FLAGS(GLOBAL_CFLAGS, "-Wall -Wextra -Wmissing-declarations -Wredunda
 GLOBAL_LDFLAGS="$PTHREAD_LIBS"
 
 if test "x$enable_static" = "xyes" -a "x$enable_shared" = "xno"; then
-  GLOBAL_CFLAGS+=" -DLIBUSBMUXD_STATIC"
+  GLOBAL_CFLAGS="$GLOBAL_CFLAGS -DLIBUSBMUXD_STATIC"
 fi
 
 AC_SUBST(GLOBAL_CFLAGS)
