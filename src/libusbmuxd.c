@@ -51,16 +51,15 @@
 #define ECONNREFUSED 107
 #endif
 
-#include <unistd.h>
-#include <signal.h>
-
-#ifdef WIN32
+#ifdef _WIN32
 #include <winsock2.h>
 #include <windows.h>
 #ifndef HAVE_SLEEP
 #define sleep(x) Sleep(x*1000)
 #endif
 #else
+#include <unistd.h>
+#include <signal.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #if defined(HAVE_PROGRAM_INVOCATION_SHORT_NAME) && !defined(HAVE_PROGRAM_INVOCATION_SHORT_NAME_ERRNO_H)
@@ -165,7 +164,7 @@ static int connect_usbmuxd_socket()
 	char *usbmuxd_socket_addr = getenv("USBMUXD_SOCKET_ADDRESS");
 	if (usbmuxd_socket_addr) {
 		if (strncmp(usbmuxd_socket_addr, "UNIX:", 5) == 0) {
-#if defined(WIN32) || defined(__CYGWIN__)
+#if defined(_WIN32) || defined(__CYGWIN__)
 			/* not supported, ignore */
 #else
 			if (usbmuxd_socket_addr[5] != '\0') {
@@ -216,7 +215,7 @@ static int connect_usbmuxd_socket()
 			}
 		}
 	}
-#if defined(WIN32) || defined(__CYGWIN__)
+#if defined(_WIN32) || defined(__CYGWIN__)
 	res = socket_connect("127.0.0.1", USBMUXD_SOCKET_PORT);
 #else
 	res = socket_connect_unix(USBMUXD_SOCKET_FILE);
@@ -661,7 +660,7 @@ static void get_prog_name()
 	if (pname) {
 		prog_name = strdup(pname);
 	}
-#elif defined (WIN32)
+#elif defined (_WIN32)
 	TCHAR *_pname = malloc((MAX_PATH+1) * sizeof(TCHAR));
 	if (GetModuleFileName(NULL, _pname, MAX_PATH+1) > 0) {
 		char* pname = NULL;
