@@ -301,7 +301,7 @@ int main(int argc, char **argv)
 			print_usage(argc, argv, 0);
 			return 0;
 		case 'v':
-			printf("%s %s\n", TOOL_NAME, PACKAGE_VERSION);
+			printf("%s %s\n", TOOL_NAME, libusbmuxd_version());
 			return 0;
 		default:
 			print_usage(argc, argv, 1);
