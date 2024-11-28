@@ -36,7 +36,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <getopt.h>
-#ifdef WIN32
+#ifdef _WIN32
 #include <winsock2.h>
 #include <windows.h>
 #else
@@ -54,7 +54,7 @@ static int debug_level = 0;
 
 static size_t read_data_socket(int fd, uint8_t* buf, size_t bufsize)
 {
-#ifdef WIN32
+#ifdef _WIN32
     u_long bytesavailable = 0;
     if (fd == STDIN_FILENO) {
         bytesavailable = bufsize;
@@ -166,7 +166,7 @@ int main(int argc, char **argv)
         return -EINVAL;
     }
 
-#ifndef WIN32
+#ifndef _WIN32
     signal(SIGPIPE, SIG_IGN);
 #endif
 

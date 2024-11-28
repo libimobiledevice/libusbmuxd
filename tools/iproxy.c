@@ -37,7 +37,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <getopt.h>
-#ifdef WIN32
+#ifdef _WIN32
 #include <winsock2.h>
 #include <windows.h>
 typedef unsigned int socklen_t;
@@ -370,7 +370,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-#ifndef WIN32
+#ifndef _WIN32
 	signal(SIGPIPE, SIG_IGN);
 #endif
 
@@ -412,7 +412,7 @@ int main(int argc, char **argv)
 	fd_set fds;
 	FD_ZERO(&fds);
 	for (i = 0; i < num_listen; i++) {
-#ifdef WIN32
+#ifdef _WIN32
 		u_long l_yes = 1;
 		ioctlsocket(listen_sock[i].fd, FIONBIO, &l_yes);
 #else
