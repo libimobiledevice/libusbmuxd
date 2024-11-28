@@ -31,15 +31,15 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <fcntl.h>
 #include <stddef.h>
-#include <unistd.h>
 #include <errno.h>
-#include <getopt.h>
+
 #ifdef _WIN32
 #include <winsock2.h>
 #include <windows.h>
 #else
+#include <fcntl.h>
+#include <unistd.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -47,8 +47,16 @@
 #include <signal.h>
 #endif
 
-#include "usbmuxd.h"
+#ifdef _MSC_VER
+#include <basetsd.h>
+typedef SSIZE_T ssize_t;
+#define STDIN_FILENO  _fileno(stdin)
+#define STDOUT_FILENO _fileno(stdout)
+#endif
+
+#include <getopt.h>
 #include <libimobiledevice-glue/socket.h>
+#include "usbmuxd.h"
 
 static int debug_level = 0;
 

@@ -32,20 +32,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fcntl.h>
 #include <stddef.h>
-#include <unistd.h>
 #include <errno.h>
-#include <getopt.h>
+
 #ifdef _WIN32
 #include <winsock2.h>
 #include <windows.h>
 typedef unsigned int socklen_t;
 #else
+#include <fcntl.h>
+#include <unistd.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <signal.h>
 #endif
+
+#include <getopt.h>
 #include <libimobiledevice-glue/socket.h>
 #include <libimobiledevice-glue/thread.h>
 #include "usbmuxd.h"
