@@ -92,6 +92,10 @@ static char* stpncpy(char *dst, const char *src, size_t len)
 }
 #endif
 
+#ifdef _MSC_VER
+#define strcasecmp _stricmp
+#endif
+
 #include <plist/plist.h>
 #define PLIST_CLIENT_VERSION_STRING PACKAGE_STRING
 #define PLIST_LIBUSBMUX_VERSION 3
