@@ -69,7 +69,7 @@ AC_TYPE_UINT32_T
 AC_TYPE_UINT8_T
 
 # Checks for library functions.
-AC_CHECK_FUNCS([strcasecmp strdup strerror stpncpy sleep malloc realloc getifaddrs])
+AC_CHECK_FUNCS([strcasecmp strdup strerror stpncpy malloc realloc getifaddrs])
 
 # Check for operating system
 AC_MSG_CHECKING([for platform-specific build settings])

@@ -37,6 +37,9 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #include <windows.h>
+#ifndef _MSC_VER
+#include <unistd.h>
+#endif
 #else
 #include <fcntl.h>
 #include <unistd.h>
