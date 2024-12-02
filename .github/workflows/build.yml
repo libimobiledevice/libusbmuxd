@@ -113,7 +113,7 @@ jobs:
         name: libusbmuxd-latest_macOS
         path: libusbmuxd.tar
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2019
     defaults:
       run:
         shell: msys2 {0}
