@@ -95,7 +95,6 @@ static char* stpncpy(char *dst, const char *src, size_t len)
 #endif
 
 #include <plist/plist.h>
-#define PLIST_CLIENT_VERSION_STRING PACKAGE_STRING
 #define PLIST_LIBUSBMUX_VERSION 3
 
 static char *bundle_id = NULL;
@@ -115,6 +114,9 @@ static char *prog_name = NULL;
 static int libusbmuxd_debug = 0;
 #ifndef PACKAGE
 #define PACKAGE "libusbmuxd"
+#endif
+#ifndef PACKAGE_NAME
+#define PACKAGE_NAME PACKAGE
 #endif
 #define LIBUSBMUXD_DEBUG(level, format, ...) if (level <= libusbmuxd_debug) fprintf(stderr, ("[" PACKAGE "] " format), __VA_ARGS__); fflush(stderr);
 #define LIBUSBMUXD_ERROR(format, ...) LIBUSBMUXD_DEBUG(0, format, __VA_ARGS__)
@@ -722,6 +724,9 @@ static void get_prog_name()
 
 static plist_t create_plist_message(const char* message_type)
 {
+	char client_version[128];
+	snprintf(client_version, 128, PACKAGE_NAME " %s", libusbmuxd_version());
+printf("%s\n", client_version);
 	if (!bundle_id) {
 		get_bundle_id();
 	}
@@ -732,7 +737,7 @@ static plist_t create_plist_message(const char* message_type)
 	if (bundle_id) {
 		plist_dict_set_item(plist, "BundleID", plist_new_string(bundle_id));
 	}
-	plist_dict_set_item(plist, "ClientVersionString", plist_new_string(PLIST_CLIENT_VERSION_STRING));
+	plist_dict_set_item(plist, "ClientVersionString", plist_new_string(client_version));
 	plist_dict_set_item(plist, "MessageType", plist_new_string(message_type));
 	if (prog_name) {
 		plist_dict_set_item(plist, "ProgName", plist_new_string(prog_name));
