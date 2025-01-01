@@ -726,7 +726,6 @@ static plist_t create_plist_message(const char* message_type)
 {
 	char client_version[128];
 	snprintf(client_version, 128, PACKAGE_NAME " %s", libusbmuxd_version());
-printf("%s\n", client_version);
 	if (!bundle_id) {
 		get_bundle_id();
 	}
