@@ -158,6 +158,9 @@ static void *acceptor_thread(void *arg)
 		}
 		fprintf(stdout, "Requesting connection to NETWORK device %s (serial: %s), port %d\n", addrtxt, dev->udid, cdata->device_port);
 		cdata->sfd = socket_connect_addr(saddr, cdata->device_port);
+		if (cdata->sfd < 0) {
+			cdata->sfd = -errno;
+		}
 	} else if (dev->conn_type == CONNECTION_TYPE_USB) {
 		fprintf(stdout, "Requesting connection to USB device handle %d (serial: %s), port %d\n", dev->handle, dev->udid, cdata->device_port);
 
@@ -165,7 +168,7 @@ static void *acceptor_thread(void *arg)
 	}
 	free(dev_list);
 	if (cdata->sfd < 0) {
-		fprintf(stderr, "Error connecting to device: %s\n", strerror(errno));
+		fprintf(stderr, "Error connecting to device: %s\n", strerror(-cdata->sfd));
 	} else {
 		fd_set fds;
 		FD_ZERO(&fds);
@@ -334,7 +337,7 @@ int main(int argc, char **argv)
 			fprintf(stderr, "Invalid listen port specified in argument '%s'!\n", argv[0]);
 			free(device_udid);
 			free(source_addr);
-			return -EINVAL;
+			return EINVAL;
 		}
 		endp = NULL;
 		device_port[0] = (uint16_t)strtol(argv[1], &endp, 10);
@@ -342,7 +345,7 @@ int main(int argc, char **argv)
 			fprintf(stderr, "Invalid device port specified in argument '%s'!\n", argv[1]);
 			free(device_udid);
 			free(source_addr);
-			return -EINVAL;
+			return EINVAL;
 		}
 		num_pairs = 1;
 	} else {
@@ -354,14 +357,14 @@ int main(int argc, char **argv)
 				fprintf(stderr, "Invalid listen port specified in argument '%s'!\n", argv[i]);
 				free(device_udid);
 				free(source_addr);
-				return -EINVAL;
+				return EINVAL;
 			}
 			device_port[i] = (uint16_t)strtol(endp+1, &endp, 10);
 			if (!device_port[i] || (*endp != '\0')) {
 				fprintf(stderr, "Invalid device port specified in argument '%s'!\n", argv[i+1]);
 				free(device_udid);
 				free(source_addr);
-				return -EINVAL;
+				return EINVAL;
 			}
 		}
 		num_pairs = argc;
@@ -369,7 +372,7 @@ int main(int argc, char **argv)
 
 	if (num_pairs > 16) {
 		fprintf(stderr, "ERROR: Too many LOCAL:DEVICE port pairs. Maximum is 16.\n");
-		return -1;
+		return 1;
 	}
 
 #ifndef _WIN32
@@ -389,7 +392,7 @@ int main(int argc, char **argv)
 				for (j = num_listen; j >= 0; j--) {
 					socket_close(listen_sock[j].fd);
 				}
-				return -errno;
+				return 1;
 			}
 			listen_sock[num_listen].index = i;
 			num_listen++;
@@ -403,7 +406,7 @@ int main(int argc, char **argv)
 				for (j = num_listen; j >= 0; j--) {
 					socket_close(listen_sock[j].fd);
 				}
-				return -errno;
+				return 1;
 			}
 			listen_sock[num_listen].index = i;
 			num_listen++;
@@ -448,7 +451,7 @@ int main(int argc, char **argv)
 					socket_close(c_sock);
 					fprintf(stderr, "ERROR: Out of memory\n");
 					free(device_udid);
-					return -1;
+					return 1;
 				}
 				cdata->fd = c_sock;
 				cdata->sfd = -1;
