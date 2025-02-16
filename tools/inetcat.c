@@ -252,12 +252,15 @@ int main(int argc, char **argv)
             fprintf(stderr, "Failed to convert network address: %d (%s)\n", errno, strerror(errno));
         }
 	devfd = socket_connect_addr(saddr, device_port);
+        if (devfd < 0) {
+            devfd = -errno;
+        }
     } else if (dev->conn_type == CONNECTION_TYPE_USB) {
         devfd = usbmuxd_connect(dev->handle, device_port);
     }
     free(dev_list);
     if (devfd < 0) {
-        fprintf(stderr, "Error connecting to device: %s\n", strerror(errno));
+        fprintf(stderr, "Error connecting to device: %s\n", strerror(-devfd));
         return 1;
     }
 
