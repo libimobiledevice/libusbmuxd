@@ -1,3 +1,14 @@
+Version 2.1.1
+~~~~~~~~~~~~~
+
+* Changes:
+  - tools: Fix potential issue with select() in case the network fd is higher than the usbmux fd
+  - Switch to better initializer strategy
+  - Fix compilation on MSVC
+  - iproxy: Make sure to print correct socket error messages
+  - inetcat: Make sure to report correct error messages
+
+
 Version 2.1.0
 ~~~~~~~~~~~~~
 
