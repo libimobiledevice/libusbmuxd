@@ -52,7 +52,7 @@ available. This project uses autotools for the build process, allowing to
 have common build steps across different platforms.
 Only the prerequisites differ and they are described in this section.
 
-libusbmuxd requires [libplist](https://github.com/libimobiledevice/libplist) and [libimobiledevice-glue](https://github.com/libimobiledevice/libimobiledevice-glue). On Linux, it also requires [usbmuxd](https://github.com/libimobiledevice/usbmuxd) installed on the system, while macOS has its own copy and on Windows AppleMobileDeviceSupport package provides it.
+libusbmuxd requires [libplist](https://github.com/libimobiledevice/libplist) and [libimobiledevice-glue](https://github.com/libimobiledevice/libimobiledevice-glue). On Linux, it also requires [usbmuxd](https://github.com/libimobiledevice/usbmuxd) installed on the system, while macOS has its own copy and on Windows [AppleMobileDeviceSupport](TODO link) package provides it.
 Check [libplist's Building](https://github.com/libimobiledevice/libplist?tab=readme-ov-file#building) and [libimobiledevice-glue's Building](https://github.com/libimobiledevice/libimobiledevice-glue?tab=readme-ov-file#building)
 section of the respective README on how to build them. Note that some platforms might have them as a package.
 
