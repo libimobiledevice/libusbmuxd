@@ -72,7 +72,7 @@ section of the respective README on how to build them. Note that some platforms 
   	libimobiledevice-glue-dev \
   	usbmuxd
   ```
-  In case libplist-dev, libimobiledevice-glue-dev, or usbmuxd are not available, you can manually build and install them. See note above.
+  In case `libplist-dev`, `libimobiledevice-glue-dev`, or `usbmuxd` are not available, you can manually build and install them. See note above.
 
 #### macOS
 
@@ -91,6 +91,7 @@ section of the respective README on how to build them. Note that some platforms 
 
 #### Windows
 
+* Make sure iTunes is installed, which provides the `usbmuxd` service.
 * Using [MSYS2](https://www.msys2.org/) is the official way of compiling this project on Windows. Download the MSYS2 installer
   and follow the installation steps.
 
