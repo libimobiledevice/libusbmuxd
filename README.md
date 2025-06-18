@@ -57,6 +57,7 @@ Only the prerequisites differ and they are described in this section.
 - On Linux it also requires [usbmuxd](https://github.com/libimobiledevice/usbmuxd) to be installed and running on the system.
 - On macOS this service is already provided by the operating system.
 - On Windows [the Apple Mobile Device Service](https://support.apple.com/102347) is automatically provided when iTunes is installed.
+
 Check [libplist's Building](https://github.com/libimobiledevice/libplist?tab=readme-ov-file#building) and [libimobiledevice-glue's Building](https://github.com/libimobiledevice/libimobiledevice-glue?tab=readme-ov-file#building)
 section of the respective README on how to build them. Note that some platforms might have them as a package.
 
