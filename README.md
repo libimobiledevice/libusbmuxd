@@ -19,7 +19,7 @@
 - [License](#license)
 - [Credits](#credits)
 
-## Features
+## Overview
 
 This project is a client library to multiplex connections from and to iOS
 devices alongside command-line utilities.
@@ -28,15 +28,11 @@ It is primarily used by applications which use the [libimobiledevice](https://gi
 library to communicate with services running on iOS devices.
 
 The library does not establish a direct connection with a device but requires
-connecting to a socket provided by the usbmuxd daemon.
+connecting to a socket provided by the `usbmuxd` daemon.
 
-The usbmuxd daemon is running upon installing iTunes on Windows and Mac OS X.
+On Windows and Mac OS X, the `usbmuxd` daemon is provided by iTunes upon installing. For Linux, the [libimobiledevice project](https://github.com/libimobiledevice/) provides an open-source reimplementation of the [usbmuxd daemon](https://github.com/libimobiledevice/usbmuxd.git/) to use on Linux or as an alternative to communicate with iOS devices.
 
-The [libimobiledevice project](https://github.com/libimobiledevice/) provides an open-source reimplementation of
-the [usbmuxd daemon](https://github.com/libimobiledevice/usbmuxd.git/) to use on Linux or as an alternative to communicate with
-iOS devices without the need to install iTunes.
-
-Some key features are:
+## Key features
 
 - **Protocol:** Provides an interface to handle the usbmux protocol
 - **Port Proxy:** Provides the `iproxy` utility to proxy ports to the device
@@ -56,7 +52,12 @@ available. This project uses autotools for the build process, allowing to
 have common build steps across different platforms.
 Only the prerequisites differ and they are described in this section.
 
-libusbmuxd requires [libplist](https://github.com/libimobiledevice/libplist) and [libimobiledevice-glue](https://github.com/libimobiledevice/libimobiledevice-glue). On Linux, it also requires [usbmuxd](https://github.com/libimobiledevice/usbmuxd) installed on the system, while macOS has its own copy and on Windows AppleMobileDeviceSupport package provides it.
+`libusbmuxd` requires [libplist](https://github.com/libimobiledevice/libplist) and [libimobiledevice-glue](https://github.com/libimobiledevice/libimobiledevice-glue).
+
+- On Linux it also requires [usbmuxd](https://github.com/libimobiledevice/usbmuxd) to be installed and running on the system.
+- On macOS this service is already provided by the operating system.
+- On Windows [the Apple Mobile Device Service](https://support.apple.com/102347) is automatically provided when iTunes is installed.
+
 Check [libplist's Building](https://github.com/libimobiledevice/libplist?tab=readme-ov-file#building) and [libimobiledevice-glue's Building](https://github.com/libimobiledevice/libimobiledevice-glue?tab=readme-ov-file#building)
 section of the respective README on how to build them. Note that some platforms might have them as a package.
 
@@ -76,7 +77,7 @@ section of the respective README on how to build them. Note that some platforms 
   	libimobiledevice-glue-dev \
   	usbmuxd
   ```
-  In case libplist-dev, libimobiledevice-glue-dev, or usbmuxd are not available, you can manually build and install them. See note above.
+  In case `libplist-dev`, `libimobiledevice-glue-dev`, or `usbmuxd` are not available, you can manually build and install them. See note above.
 
 #### macOS
 
@@ -95,6 +96,7 @@ section of the respective README on how to build them. Note that some platforms 
 
 #### Windows
 
+* Make sure iTunes is installed, which provides the `usbmuxd` service.
 * Using [MSYS2](https://www.msys2.org/) is the official way of compiling this project on Windows. Download the MSYS2 installer
   and follow the installation steps.
 
