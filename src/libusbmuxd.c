@@ -658,7 +658,7 @@ static void get_bundle_id()
 
 static void get_prog_name()
 {
-#if defined(__APPLE__) || defined(__FreeBSD__)
+#if defined (HAVE_GETPROGNAME)
 	const char *pname = getprogname();
 	if (pname) {
 		prog_name = strdup(pname);
