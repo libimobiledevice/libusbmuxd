@@ -1,0 +1,53 @@
+/* Define if compiled with -fvisibility=hidden */
+#mesondefine HAVE_FVISIBILITY
+
+/* Define to 1 if you have the `getifaddrs' function. */
+#mesondefine HAVE_GETIFADDRS
+
+/* Define if you have inotify support (linux only) */
+#mesondefine HAVE_INOTIFY
+
+/* Define if you have program_invocation_short_name */
+#mesondefine HAVE_PROGRAM_INVOCATION_SHORT_NAME
+
+/* Define if program_invocation_short_name is declared in errno.h */
+#mesondefine HAVE_PROGRAM_INVOCATION_SHORT_NAME_ERRNO_H
+
+/* Define to 1 if you have the `pselect' function. */
+#mesondefine HAVE_PSELECT
+
+/* Define to 1 if you have the `pthread_cancel' function. */
+#mesondefine HAVE_PTHREAD_CANCEL
+
+/* Define to 1 if you have the `realloc' function. */
+#mesondefine HAVE_REALLOC
+
+/* Define to 1 if you have the `sleep' function. */
+#mesondefine HAVE_SLEEP
+
+/* Define to 1 if you have the `stpncpy' function. */
+#mesondefine HAVE_STPNCPY
+
+/* Define to 1 if you have the `strcasecmp' function. */
+#mesondefine HAVE_STRCASECMP
+
+/* Define to 1 if you have the `strdup' function. */
+#mesondefine HAVE_STRDUP
+
+/* Define to 1 if you have the `strerror' function. */
+#mesondefine HAVE_STRERROR
+
+/* Define to the address where bug reports for this package should be sent. */
+#mesondefine PACKAGE_BUGREPORT
+
+/* Define to the full name of this package. */
+#mesondefine PACKAGE_NAME
+
+/* Define to the full name and version of this package. */
+#mesondefine PACKAGE_STRING
+
+/* Define to the home page for this package. */
+#mesondefine PACKAGE_URL
+
+/* Define to the version of this package. */
+#mesondefine PACKAGE_VERSION
