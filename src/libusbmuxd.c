@@ -1118,16 +1118,24 @@ static void device_monitor_cleanup(void* data)
  */
 static void *device_monitor(void *data)
 {
-	running = 1;
 	collection_init(&devices);
-	cancelling = 0;
 
 #ifdef HAVE_THREAD_CLEANUP
 	thread_cleanup_push(device_monitor_cleanup, NULL);
 #endif
 	do {
 
-		listenfd = usbmuxd_listen();
+		int sfd = usbmuxd_listen();
+		mutex_lock(&listener_mutex);
+		if (cancelling) {
+			mutex_unlock(&listener_mutex);
+			if (sfd >= 0) {
+				socket_close(sfd);
+			}
+			break;
+		}
+		listenfd = sfd;
+		mutex_unlock(&listener_mutex);
 		if (listenfd < 0) {
 			continue;
 		}
@@ -1182,6 +1190,8 @@ int usbmuxd_events_subscribe(usbmuxd_subscription_context_t *context, usbmuxd_ev
 	collection_add(&listeners, *context);
 
 	if (devmon == THREAD_T_NULL || !thread_alive(devmon)) {
+		running = 1;
+		cancelling = 0;
 		mutex_unlock(&listener_mutex);
 		int res = thread_new(&devmon, device_monitor, NULL);
 		if (res != 0) {
@@ -1231,8 +1241,13 @@ int usbmuxd_events_unsubscribe(usbmuxd_subscription_context_t context)
 
 	if (num == 0) {
 		int res = 0;
+		mutex_lock(&listener_mutex);
 		cancelling = 1;
-		socket_shutdown(listenfd, SHUT_RDWR);
+		running = 0;
+		if (listenfd >= 0) {
+			socket_shutdown(listenfd, SHUT_RDWR);
+		}
+		mutex_unlock(&listener_mutex);
 		if (thread_alive(devmon)) {
 			if (thread_cancel(devmon) < 0) {
 				running = 0;
