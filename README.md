@@ -30,11 +30,12 @@ library to communicate with services running on iOS devices.
 The library does not establish a direct connection with a device but requires
 connecting to a socket provided by the usbmuxd daemon.
 
-The usbmuxd daemon is running upon installing iTunes on Windows and Mac OS X.
+- **Linux:** install the open-source [usbmuxd](https://github.com/libimobiledevice/usbmuxd) reimplementation provided by the libimobiledevice project.
+- **macOS:** the daemon is provided by the operating system.
+- **Windows:** the [Apple Mobile Device Service](https://support.apple.com/102347) is installed along with [iTunes](https://www.apple.com/itunes/) or the [Apple Devices app](https://apps.microsoft.com/detail/9np83lwlpz9k).
 
-The [libimobiledevice project](https://github.com/libimobiledevice/) provides an open-source reimplementation of
-the [usbmuxd daemon](https://github.com/libimobiledevice/usbmuxd.git/) to use on Linux or as an alternative to communicate with
-iOS devices without the need to install iTunes.
+The open-source usbmuxd can also be used on other platforms as an alternative
+to communicate with iOS devices without Apple's software.
 
 Some key features are:
 
@@ -56,7 +57,8 @@ available. This project uses autotools for the build process, allowing to
 have common build steps across different platforms.
 Only the prerequisites differ and they are described in this section.
 
-libusbmuxd requires [libplist](https://github.com/libimobiledevice/libplist) and [libimobiledevice-glue](https://github.com/libimobiledevice/libimobiledevice-glue). On Linux, it also requires [usbmuxd](https://github.com/libimobiledevice/usbmuxd) installed on the system, while macOS has its own copy and on Windows AppleMobileDeviceSupport package provides it.
+libusbmuxd requires [libplist](https://github.com/libimobiledevice/libplist) and [libimobiledevice-glue](https://github.com/libimobiledevice/libimobiledevice-glue).
+On Linux it also requires [usbmuxd](https://github.com/libimobiledevice/usbmuxd) to be installed and running; on macOS and Windows the daemon is provided by Apple (see [Features](#features)).
 Check [libplist's Building](https://github.com/libimobiledevice/libplist?tab=readme-ov-file#building) and [libimobiledevice-glue's Building](https://github.com/libimobiledevice/libimobiledevice-glue?tab=readme-ov-file#building)
 section of the respective README on how to build them. Note that some platforms might have them as a package.
 
@@ -279,4 +281,4 @@ iPadOS, tvOS, watchOS, and macOS are trademarks of Apple Inc.
 This project is an independent software library and has not been authorized,
 sponsored, or otherwise approved by Apple Inc.
 
-README Updated on: 2024-10-22
+README Updated on: 2026-11-16
