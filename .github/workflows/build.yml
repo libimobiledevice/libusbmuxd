@@ -14,14 +14,14 @@ jobs:
       run: |
           echo "target_triplet=`gcc -dumpmachine`" >> $GITHUB_ENV
     - name: fetch libplist
-      uses: dawidd6/action-download-artifact@v6
+      uses: dawidd6/action-download-artifact@v24
       with:
         github_token: ${{secrets.GITHUB_TOKEN}}
         workflow: build.yml
         name: libplist-latest_${{env.target_triplet}}
         repo: libimobiledevice/libplist
     - name: fetch libimobiledevice-glue
-      uses: dawidd6/action-download-artifact@v6
+      uses: dawidd6/action-download-artifact@v24
       with:
         github_token: ${{secrets.GITHUB_TOKEN}}
         workflow: build.yml
@@ -35,7 +35,9 @@ jobs:
           done
           sudo cp -r extract/* /
           sudo ldconfig
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
     - name: autogen
       run: ./autogen.sh PKG_CONFIG_PATH=/usr/local/lib/pkgconfig LDFLAGS="-Wl,-rpath=/usr/local/lib"
     - name: make
@@ -48,7 +50,7 @@ jobs:
           DESTDIR=`pwd`/dest make install
           tar -C dest -cf libusbmuxd.tar usr
     - name: publish artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: libusbmuxd-latest_${{env.target_triplet}}
         path: libusbmuxd.tar
@@ -64,14 +66,14 @@ jobs:
           fi
       shell: bash
     - name: fetch libplist
-      uses: dawidd6/action-download-artifact@v6
+      uses: dawidd6/action-download-artifact@v24
       with:
         github_token: ${{secrets.GITHUB_TOKEN}}
         workflow: build.yml
         name: libplist-latest_macOS
         repo: libimobiledevice/libplist
     - name: fetch libimobiledevice-glue
-      uses: dawidd6/action-download-artifact@v6
+      uses: dawidd6/action-download-artifact@v24
       with:
         github_token: ${{secrets.GITHUB_TOKEN}}
         workflow: build.yml
@@ -84,7 +86,9 @@ jobs:
             tar -C extract -xvf $I
           done
           sudo cp -r extract/* /
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
     - name: autogen
       run: |
           SDKDIR=`xcrun --sdk macosx --show-sdk-path`
@@ -108,12 +112,12 @@ jobs:
           DESTDIR=`pwd`/dest make install
           tar -C dest -cf libusbmuxd.tar usr
     - name: publish artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: libusbmuxd-latest_macOS
         path: libusbmuxd.tar
   build-windows:
-    runs-on: windows-latest
+    runs-on: ${{ matrix.runner }}
     defaults:
       run:
         shell: msys2 {0}
@@ -121,8 +125,11 @@ jobs:
       fail-fast: false
       matrix:
         include: [
-          { msystem: MINGW64, arch: x86_64 },
-          { msystem: MINGW32, arch: i686   }
+          { runner: windows-latest, msystem: CLANG64, arch: x86_64, flavor: w64-clang, cc: clang },
+          { runner: windows-latest, msystem: UCRT64, arch: x86_64, flavor: w64-ucrt, cc: gcc },
+          { runner: windows-latest, msystem: MINGW64, arch: x86_64, flavor: w64, cc: gcc },
+          { runner: windows-latest, msystem: MINGW32, arch: i686, flavor: w64, cc: gcc },
+          { runner: windows-11-arm, msystem: CLANGARM64, arch: aarch64, flavor: w64-clang, cc: clang }
         ]
     steps:
     - uses: msys2/setup-msys2@v2
@@ -130,11 +137,12 @@ jobs:
         msystem: ${{ matrix.msystem }}
         release: false
         update: false
+        suppress-deprecation-warnings: msystem-mingw32 msystem-mingw64
         install: >-
           base-devel
           git
-          mingw-w64-${{ matrix.arch }}-gcc
-          mingw-w64-${{ matrix.arch }}-pkg-config
+          mingw-${{ matrix.flavor }}-${{ matrix.arch }}-${{ matrix.cc }}
+          mingw-${{ matrix.flavor }}-${{ matrix.arch }}-pkgconf
           make
           libtool
           autoconf
@@ -146,18 +154,18 @@ jobs:
           echo "target_triplet=`gcc -dumpmachine`" >> $GITHUB_ENV
           git config --global core.autocrlf false
     - name: fetch libplist
-      uses: dawidd6/action-download-artifact@v6
+      uses: dawidd6/action-download-artifact@v24
       with:
         github_token: ${{secrets.GITHUB_TOKEN}}
         workflow: build.yml
-        name: libplist-latest_${{ matrix.arch }}-${{ env.dest }}
+        name: libplist-latest_${{ matrix.arch }}-windows-${{ env.dest }}
         repo: libimobiledevice/libplist
     - name: fetch libimobiledevice-glue
-      uses: dawidd6/action-download-artifact@v6
+      uses: dawidd6/action-download-artifact@v24
       with:
         github_token: ${{secrets.GITHUB_TOKEN}}
         workflow: build.yml
-        name: libimobiledevice-glue-latest_${{ matrix.arch }}-${{ env.dest }}
+        name: libimobiledevice-glue-latest_${{ matrix.arch }}-windows-${{ env.dest }}
         repo: libimobiledevice/libimobiledevice-glue
     - name: install external dependencies
       run: |
@@ -166,9 +174,11 @@ jobs:
             tar -C extract -xvf $I
           done
           cp -r extract/* /
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
     - name: autogen
-      run: ./autogen.sh CC=gcc CXX=g++
+      run: ./autogen.sh
     - name: make
       run: make
     - name: make install
@@ -179,7 +189,7 @@ jobs:
           DESTDIR=`pwd`/dest make install
           tar -C dest -cf libusbmuxd.tar ${{ env.dest }}
     - name: publish artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
-        name: libusbmuxd-latest_${{ matrix.arch }}-${{ env.dest }}
+        name: libusbmuxd-latest_${{ matrix.arch }}-windows-${{ env.dest }}
         path: libusbmuxd.tar
