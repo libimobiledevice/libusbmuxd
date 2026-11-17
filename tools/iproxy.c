@@ -131,23 +131,14 @@ static void *acceptor_thread(void *arg)
 		struct sockaddr_storage saddr_storage;
 		struct sockaddr* saddr = (struct sockaddr*)&saddr_storage;
 
-		if (dev->conn_data[1] == 0x02) { // AF_INET
-			saddr->sa_family = AF_INET;
-			memcpy(&saddr->sa_data[0], (uint8_t*)dev->conn_data+2, 14);
-		}
-		else if (dev->conn_data[1] == 0x1E) { //AF_INET6 (bsd)
+		/* conn_data holds the address in the native sockaddr layout */
+		memcpy(saddr, dev->conn_data, sizeof(saddr_storage));
+		if (saddr->sa_family != AF_INET
 #ifdef AF_INET6
-			saddr->sa_family = AF_INET6;
-			/* copy the address and the host dependent scope id */
-			memcpy(&saddr->sa_data[0], (uint8_t*)dev->conn_data+2, 26);
-#else
-			fprintf(stderr, "ERROR: Got an IPv6 address but this system doesn't support IPv6\n");
-			CDATA_FREE(cdata);
-			return NULL;
+		    && saddr->sa_family != AF_INET6
 #endif
-		}
-		else {
-			fprintf(stderr, "Unsupported address family 0x%02x\n", dev->conn_data[1]);
+		) {
+			fprintf(stderr, "Unsupported address family 0x%02x\n", saddr->sa_family);
 			CDATA_FREE(cdata);
 			return NULL;
 		}

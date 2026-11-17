@@ -245,6 +245,43 @@ static void sanitize_udid(usbmuxd_device_info_t *devinfo)
 	}
 }
 
+/**
+ * usbmuxd (Apple's, also when reached remotely) reports network addresses as
+ * BSD sockaddr: [sa_len][sa_family][...]. Convert it in place to the native
+ * layout so that conn_data can be used as a struct sockaddr on every platform.
+ */
+static void convert_network_addr(uint8_t *conn_data)
+{
+#ifdef __APPLE__
+	/* same layout and family values as on the wire */
+	(void)conn_data;
+#else
+	int family;
+
+	switch (conn_data[1]) {
+	case 0x02: /* AF_INET (macOS) */
+		family = AF_INET;
+		break;
+#ifdef AF_INET6
+	case 0x1E: /* AF_INET6 (macOS) */
+		family = AF_INET6;
+		break;
+#endif
+	default:
+		memset(conn_data, 0, 2);
+		return;
+	}
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
+	/* BSD layout, only the family value differs */
+	conn_data[1] = (uint8_t)family;
+#else
+	/* 16-bit sa_family; everything after the 2-byte header has the same layout */
+	uint16_t fam16 = (uint16_t)family;
+	memcpy(conn_data, &fam16, sizeof(fam16));
+#endif
+#endif
+}
+
 static usbmuxd_device_info_t *device_info_from_plist(plist_t props)
 {
 	usbmuxd_device_info_t* devinfo = NULL;
@@ -316,6 +353,10 @@ static usbmuxd_device_info_t *device_info_from_plist(plist_t props)
 		LIBUSBMUXD_ERROR("%s: Failed to get EscapedFullServiceName!\n", __func__);
 		free(devinfo);
 		devinfo = NULL;
+	}
+
+	if (devinfo && devinfo->conn_type == CONNECTION_TYPE_NETWORK) {
+		convert_network_addr(devinfo->conn_data);
 	}
 
 	return devinfo;

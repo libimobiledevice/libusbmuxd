@@ -56,6 +56,9 @@ enum usbmux_connection_type {
  * The relevant 'handle' should be passed to 'usbmuxd_connect()', to
  * start a proxy connection.  The value 'handle' should be considered
  * opaque and no presumption made about the meaning of its value.
+ * The conn_data member, for CONNECTION_TYPE_NETWORK devices, holds the
+ * device address as a native struct sockaddr (sockaddr_in or sockaddr_in6)
+ * of the platform the library runs on.
  */
 typedef struct {
 	uint32_t handle;
