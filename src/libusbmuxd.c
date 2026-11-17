@@ -362,9 +362,18 @@ static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload
 		return recv_len;
 	}
 
+	if (hdr.length < sizeof(hdr)) {
+		LIBUSBMUXD_DEBUG(1, "%s: Invalid packet length %u\n", __func__, hdr.length);
+		return -EBADMSG;
+	}
+
 	uint32_t payload_size = hdr.length - sizeof(hdr);
 	if (payload_size > 0) {
 		payload_loc = (char*)malloc(payload_size);
+		if (!payload_loc) {
+			LIBUSBMUXD_ERROR("%s: Out of memory while allocating payload of size %u\n", __func__, payload_size);
+			return -ENOMEM;
+		}
 		uint32_t rsize = 0;
 		do {
 			int res = socket_receive_timeout(sfd, payload_loc + rsize, payload_size - rsize, 0, 5000);
@@ -471,10 +480,21 @@ static int receive_packet(int sfd, struct usbmuxd_header *header, void **payload
 		}
 		plist_free(plist);
 	} else if (hdr.message == MESSAGE_DEVICE_ADD) {
+		if (payload_size < sizeof(struct usbmuxd_device_record)) {
+			LIBUSBMUXD_DEBUG(1, "%s: Device record payload too small (%u bytes)\n", __func__, payload_size);
+			free(payload_loc);
+			return -EBADMSG;
+		}
 		usbmuxd_device_info_t *devinfo = device_info_from_device_record((struct usbmuxd_device_record*)payload_loc);
 		free(payload_loc);
 		*payload = devinfo;
 	} else {
+		/* all other binary replies carry at least a 32-bit value */
+		if (payload_size < sizeof(uint32_t)) {
+			LIBUSBMUXD_DEBUG(1, "%s: Payload of message %u too small (%u bytes)\n", __func__, hdr.message, payload_size);
+			free(payload_loc);
+			return -EBADMSG;
+		}
 		*payload = payload_loc;
 	}
 
