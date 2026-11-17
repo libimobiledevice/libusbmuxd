@@ -72,12 +72,15 @@ extern int _NSGetExecutablePath(char* buf, uint32_t* bufsize);
 #ifdef HAVE_INOTIFY
 #include <sys/inotify.h>
 #include <sys/select.h>
+#include <fcntl.h>
 #include <pthread.h>
 #define EVENT_SIZE  (sizeof (struct inotify_event))
 #define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 16))
 #define USBMUXD_DIRNAME "/var/run"
 #define USBMUXD_SOCKET_NAME "usbmuxd"
 static int use_inotify = 1;
+/* self-pipe used to wake up the inotify wait when the device monitor is stopped */
+static int inotify_wake_fd[2] = {-1, -1};
 #endif /* HAVE_INOTIFY */
 
 #ifndef HAVE_STPNCPY
@@ -957,17 +960,26 @@ static int usbmuxd_listen_inotify()
 
 	while (1) {
 		fd_set rfds;
-		struct timespec tv = {1, 0};
+		int maxfd = inot_fd;
 
 		FD_ZERO(&rfds);
 		FD_SET(inot_fd, &rfds);
-		int r = pselect(inot_fd+1, &rfds, NULL, NULL, &tv, NULL);
+		if (inotify_wake_fd[0] >= 0) {
+			FD_SET(inotify_wake_fd[0], &rfds);
+			if (inotify_wake_fd[0] > maxfd) {
+				maxfd = inotify_wake_fd[0];
+			}
+		}
+		int r = pselect(maxfd+1, &rfds, NULL, NULL, NULL, NULL);
 		if (r < 0) {
+			if (errno == EINTR && !cancelling) {
+				continue;
+			}
 			break;
 		}
 
-		if (r == 0) {
-			continue;
+		if (inotify_wake_fd[0] >= 0 && FD_ISSET(inotify_wake_fd[0], &rfds)) {
+			break;
 		}
 
 		ssize_t len, i;
@@ -1212,6 +1224,14 @@ int usbmuxd_events_subscribe(usbmuxd_subscription_context_t *context, usbmuxd_ev
 	if (devmon == THREAD_T_NULL || !thread_alive(devmon)) {
 		running = 1;
 		cancelling = 0;
+#ifdef HAVE_INOTIFY
+		if (inotify_wake_fd[0] < 0 && pipe(inotify_wake_fd) != 0) {
+			inotify_wake_fd[0] = inotify_wake_fd[1] = -1;
+		} else {
+			fcntl(inotify_wake_fd[0], F_SETFD, FD_CLOEXEC);
+			fcntl(inotify_wake_fd[1], F_SETFD, FD_CLOEXEC);
+		}
+#endif
 		mutex_unlock(&listener_mutex);
 		int res = thread_new(&devmon, device_monitor, NULL);
 		if (res != 0) {
@@ -1267,18 +1287,30 @@ int usbmuxd_events_unsubscribe(usbmuxd_subscription_context_t context)
 		if (listenfd >= 0) {
 			socket_shutdown(listenfd, SHUT_RDWR);
 		}
+#ifdef HAVE_INOTIFY
+		if (inotify_wake_fd[1] >= 0) {
+			char c = 0;
+			if (write(inotify_wake_fd[1], &c, 1) < 0) {
+				LIBUSBMUXD_DEBUG(1, "%s: Failed to wake up device monitor\n", __func__);
+			}
+		}
+#endif
 		mutex_unlock(&listener_mutex);
 		if (thread_alive(devmon)) {
 			if (thread_cancel(devmon) < 0) {
 				running = 0;
 			}
-#if defined(HAVE_INOTIFY) && !defined(HAVE_PTHREAD_CANCEL)
-			pthread_kill(devmon, SIGINT);
-#endif
 			res = thread_join(devmon);
 			thread_free(devmon);
 			devmon = THREAD_T_NULL;
 		}
+#ifdef HAVE_INOTIFY
+		if (inotify_wake_fd[0] >= 0) {
+			close(inotify_wake_fd[0]);
+			close(inotify_wake_fd[1]);
+			inotify_wake_fd[0] = inotify_wake_fd[1] = -1;
+		}
+#endif
 		if ((res != 0) && (res != ESRCH)) {
 			ret = res;
 		}
