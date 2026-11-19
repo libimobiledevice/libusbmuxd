@@ -71,7 +71,7 @@ extern int _NSGetExecutablePath(char* buf, uint32_t* bufsize);
 
 #ifdef HAVE_INOTIFY
 #include <sys/inotify.h>
-#include <sys/select.h>
+#include <poll.h>
 #include <fcntl.h>
 #include <pthread.h>
 #define EVENT_SIZE  (sizeof (struct inotify_event))
@@ -946,30 +946,6 @@ static int usbmuxd_listen_poll()
 }
 
 #ifdef HAVE_INOTIFY
-#ifndef HAVE_PSELECT
-static int pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, const struct timespec *timeout, const sigset_t *sigmask)
-{
-	int ready;
-	struct timeval tv;
-	struct timeval *p_timeout;
-	sigset_t origmask;
-
-	if (timeout) {
-		tv.tv_sec = timeout->tv_sec;
-		tv.tv_usec = timeout->tv_nsec / 1000;
-		p_timeout = &tv;
-	} else {
-		p_timeout = NULL;
-	}
-
-	pthread_sigmask(SIG_SETMASK, sigmask, &origmask);
-	ready = select(nfds, readfds, writefds, exceptfds, p_timeout);
-	pthread_sigmask(SIG_SETMASK, &origmask, NULL);
-
-	return ready;
-}
-#endif
-
 static int usbmuxd_listen_inotify()
 {
 	int inot_fd;
@@ -1000,18 +976,22 @@ static int usbmuxd_listen_inotify()
 	}
 
 	while (1) {
-		fd_set rfds;
-		int maxfd = inot_fd;
+		struct pollfd pfds[2];
+		nfds_t nfds = 1;
 
-		FD_ZERO(&rfds);
-		FD_SET(inot_fd, &rfds);
+		/* use poll() rather than select(): in a process with many open
+		 * descriptors inot_fd can be >= FD_SETSIZE, and FD_SET() on it
+		 * is undefined behaviour (glibc's fortify check aborts) */
+		pfds[0].fd = inot_fd;
+		pfds[0].events = POLLIN;
+		pfds[0].revents = 0;
 		if (inotify_wake_fd[0] >= 0) {
-			FD_SET(inotify_wake_fd[0], &rfds);
-			if (inotify_wake_fd[0] > maxfd) {
-				maxfd = inotify_wake_fd[0];
-			}
+			pfds[1].fd = inotify_wake_fd[0];
+			pfds[1].events = POLLIN;
+			pfds[1].revents = 0;
+			nfds = 2;
 		}
-		int r = pselect(maxfd+1, &rfds, NULL, NULL, NULL, NULL);
+		int r = poll(pfds, nfds, -1);
 		if (r < 0) {
 			if (errno == EINTR && !cancelling) {
 				continue;
@@ -1019,7 +999,7 @@ static int usbmuxd_listen_inotify()
 			break;
 		}
 
-		if (inotify_wake_fd[0] >= 0 && FD_ISSET(inotify_wake_fd[0], &rfds)) {
+		if (nfds == 2 && (pfds[1].revents & (POLLIN | POLLHUP | POLLERR))) {
 			break;
 		}
 
