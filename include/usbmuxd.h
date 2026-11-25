@@ -29,13 +29,7 @@ extern "C" {
 #endif
 
 #ifndef USBMUXD_API
-  #ifdef LIBUSBMUXD_STATIC
-    #define USBMUXD_API
-  #elif defined(_WIN32)
-    #define USBMUXD_API __declspec(dllimport)
-  #else
-    #define USBMUXD_API
-  #endif
+  #define USBMUXD_API
 #endif
 
 /** Device lookup options for usbmuxd_get_device. */
