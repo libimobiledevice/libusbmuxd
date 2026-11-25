@@ -47,6 +47,13 @@ typedef unsigned int socklen_t;
 #include <signal.h>
 #endif
 
+/* avoid -Wsign-compare: FD_SET compares against SOCKET (unsigned) on Windows */
+#ifdef _WIN32
+#define FD_SET_FD(fd, set) FD_SET((SOCKET)(fd), (set))
+#else
+#define FD_SET_FD(fd, set) FD_SET((fd), (set))
+#endif
+
 #include <getopt.h>
 #include <libimobiledevice-glue/socket.h>
 #include <libimobiledevice-glue/thread.h>
@@ -163,8 +170,8 @@ static void *acceptor_thread(void *arg)
 	} else {
 		fd_set fds;
 		FD_ZERO(&fds);
-		FD_SET(cdata->fd, &fds);
-		FD_SET(cdata->sfd, &fds);
+		FD_SET_FD(cdata->fd, &fds);
+		FD_SET_FD(cdata->sfd, &fds);
 		int maxfd = cdata->fd > cdata->sfd ? cdata->fd : cdata->sfd;
 
 		while (1) {
@@ -415,7 +422,7 @@ int main(int argc, char **argv)
 		int flags = fcntl(listen_sock[i].fd, F_GETFL, 0);
 		fcntl(listen_sock[i].fd, F_SETFL, flags | O_NONBLOCK);
 #endif
-		FD_SET(listen_sock[i].fd, &fds);
+		FD_SET_FD(listen_sock[i].fd, &fds);
 	}
 
 	// main loop

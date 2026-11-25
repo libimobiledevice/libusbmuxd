@@ -50,6 +50,13 @@
 #include <signal.h>
 #endif
 
+/* avoid -Wsign-compare: FD_SET compares against SOCKET (unsigned) on Windows */
+#ifdef _WIN32
+#define FD_SET_FD(fd, set) FD_SET((SOCKET)(fd), (set))
+#else
+#define FD_SET_FD(fd, set) FD_SET((fd), (set))
+#endif
+
 #ifdef _MSC_VER
 #include <basetsd.h>
 typedef SSIZE_T ssize_t;
@@ -258,7 +265,7 @@ int main(int argc, char **argv)
     fd_set fds;
     FD_ZERO(&fds);
     FD_SET(STDIN_FILENO, &fds);
-    FD_SET(devfd, &fds);
+    FD_SET_FD(devfd, &fds);
 
     int ret = 0;
     uint8_t buf[4096];
